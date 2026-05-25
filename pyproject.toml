@@ -1,0 +1,100 @@
+[project]
+name = "3dt-3nd-project"
+version = "0.1.0"
+description = "제목 "
+# description = "AI 기반 냉장·냉동 식품 공유 창고 재고 최적화 플랫폼 — ColdShare"
+requires-python = "==3.11.*"
+
+# ── 기본 의존성 ────────────────────────────────────────────────────────────────
+# 설치: uv sync
+dependencies = [
+    # Azure
+    "azure-identity>=1.19.0",                # Managed Identity / az login 인증
+    "azure-keyvault-secrets>=4.9.0",         # Key Vault 시크릿 조회
+    "azure-storage-file-datalake>=12.19.0",  # ADLS Gen2 파일 접근
+    "azure-storage-blob>=12.28.0",
+    "azure-core>=1.39.0",
+
+    # API 서버
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pydantic>=2.10.0",
+
+    # DB
+    "psycopg[binary]>=3.2.0",               # PostgreSQL 네이티브 드라이버
+    "sqlalchemy>=2.0.0",                     # ORM / pandas read_sql 지원
+    "redis>=5.2.0",                          # Redis 클라이언트
+
+    # Kafka
+    "confluent-kafka>=2.6.0",               # Apache Kafka Producer/Consumer
+
+    # 데이터 처리
+    "pandas>=2.2.0",
+    "pyarrow>=18.0.0",
+    "numpy>=2.0.0",
+
+    # HTTP (외부 API 호출용 - aT, 기상청)
+    "httpx>=0.28.0",
+    "python-dotenv>=1.0.0",                  # 로컬 .env 파일 로드
+]
+
+# ── 선택 의존성 ────────────────────────────────────────────────────────────────
+# 분석가: uv sync --extra ml
+# 엔지니어: uv sync --extra databricks
+[project.optional-dependencies]
+ml = [
+    "scikit-learn>=1.6.0",   # 폐기 위험 · 수요 예측 모델
+    "xgboost>=2.1.0",
+    "mlflow>=2.20.0",        # 실험 트래킹
+    "azure-ai-ml>=1.24.0",   # ML Studio v2 SDK
+]
+databricks = [
+    "databricks-sdk>=0.44.0",  # Databricks API 접근
+]
+
+# ── 개발 전용 도구 ──────────────────────────────────────────────────────────────
+# uv sync 시 자동 포함. 팀원 모두 동일 버전 고정.
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",  # 비동기 테스트
+    "ruff>=0.9.0",             # 린터 + import 정렬
+    "black>=25.0.0",           # 코드 포매터
+    "ty>=0.0.1a6",             # 타입 체커
+    "pre-commit>=4.0.0",       # Git hook 관리
+    "locust>=2.32.0",          # 부하 테스트 (p99 SLO 측정)
+]
+
+# ── pytest 설정 ────────────────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+asyncio_mode = "auto"
+
+# ── ruff 린터 설정 ──────────────────────────────────────────────────────────────
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.ruff.lint.per-file-ignores]
+"analytics/notebooks/*.ipynb" = ["F821", "E501"]
+
+[tool.ruff]
+line-length = 100
+extend-exclude = ["analytics/notebooks/"]
+
+# ── black 포매터 설정 ───────────────────────────────────────────────────────────
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+# ── ty 타입 체커 설정 ───────────────────────────────────────────────────────────
+[tool.ty]
+src = ["src"]
+python-version = "3.11"
+
+# ── hatchling 빌드 설정 ────────────────────────────────────────────────────────
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
