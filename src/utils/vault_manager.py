@@ -1,6 +1,5 @@
 import os
 import shutil
-from contextlib import suppress
 from pathlib import Path
 
 from azure.core.exceptions import HttpResponseError, ResourceNotFoundError
@@ -39,6 +38,8 @@ def _ensure_workspace_azure_cli_cache() -> None:
     if not USER_AZURE_CONFIG_DIR.exists():
         return
 
+    # 항상 덮어쓰기: az login 직후에 원본이 잠겨 있다가 해제될 수 있으므로
+    # dst가 존재해도 원본이 더 새로우면 재복사한다.
     for name in (
         "azureProfile.json",
         "msal_token_cache.bin",
@@ -48,9 +49,13 @@ def _ensure_workspace_azure_cli_cache() -> None:
     ):
         src = USER_AZURE_CONFIG_DIR / name
         dst = WORKSPACE_AZURE_CONFIG_DIR / name
-        if src.exists() and not dst.exists():
-            with suppress(Exception):
+        if not src.exists():
+            continue
+        try:
+            if not dst.exists() or src.stat().st_mtime > dst.stat().st_mtime:
                 shutil.copy2(src, dst)
+        except Exception:
+            pass
 
 
 _normalize_proxy_env()
