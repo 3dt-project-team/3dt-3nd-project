@@ -131,7 +131,7 @@ az version   # "azure-cli": "2.xx.x"
 
 ```bash
 # 저장소 클론
-git clone https://github.com/<org>/3dt-3nd-project.git
+git clone https://github.com/3dt-project-team/3dt-3nd-project.git
 cd 3dt-3nd-project
 
 # 의존성 설치 — Python 3.11 자동 다운로드 + 가상환경 생성까지 한 번에
@@ -280,7 +280,7 @@ uv run python src/utils/vault_manager.py
 
 ---
 
-## 7. pre-commit 훅 등록
+## 7. pre-commit 훅 등록 (선택)
 
 커밋 전에 자동으로 린트·포맷·시크릿 감지를 실행하는 훅을 등록합니다.
 
