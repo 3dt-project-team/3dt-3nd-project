@@ -27,6 +27,8 @@ dependencies = [
 
     # Kafka
     "confluent-kafka>=2.6.0",               # Apache Kafka Producer/Consumer
+    "kafka-python>=2.3.1",                  # KafkaProducer used by wiki_events_collectors
+    "sseclient-py>=1.9.0",                  # Wikimedia SSE stream client
 
     # 데이터 처리
     "pandas>=2.2.0",
