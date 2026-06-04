@@ -83,10 +83,6 @@ ipython_config.py
 .python-version
 
 # pipenv
-#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
-#   However, in case of collaboration, if having platform-specific dependencies or dependencies
-#   having no cross-platform support, pipenv may install dependencies that don’t work, or not
-#   install all needed dependencies.
 #Pipfile.lock
 
 # celery beat schedule file
@@ -133,6 +129,7 @@ local.settings.json
 __blobstorage__
 __queuestorage__
 __azurite_db*__.json
+
 # ============================================================
 # 데이터 파일 — 절대 Git에 커밋하지 말 것
 # 모든 데이터는 ADLS Gen2(Azure Data Lake)에 보관하세요.
@@ -151,7 +148,6 @@ raw/
 *.ipynb_checkpoints
 
 # IDE
-
 .idea/
 
 # Azure Functions
@@ -175,24 +171,24 @@ mlartifacts/
 __blobstorage__/
 __azurite_db_*.json
 __blobstorage__/
+
 # coding agent
 CLAUDE.md
 
 .python_packages
 ref/
 
-
 # Python 관련 자동 생성 파일
 __pycache__/
 *.py[cod]
 *$py.class
 
-# 가상 환경 (용량이 매우 크고 각자 설치해야 하므로 제외)
+# 가상 환경
 .venv/
 venv/
 env/
 
-# 보안 및 설정 파일 (비밀번호나 API 키가 포함된 파일은 절대 올리지 않음)
+# 보안 및 설정 파일
 .env
 local_settings.py
 
@@ -200,3 +196,6 @@ local_settings.py
 .vscode/
 .idea/
 .DS_Store
+
+# DataSentinel 런타임 생성 파일
+tenant_registry.json
