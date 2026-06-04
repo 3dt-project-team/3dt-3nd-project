@@ -10,6 +10,7 @@ DataSentinel — Universal Producer
   - 원본 데이터 전체 보존 (필드 선택 없이 100% 전송)
   - SSE 연결 끊기면 자동 재연결
   - DataSentinel 메타데이터만 추가 (_ingest_ts 등)
+  - Kafka 실패 시 Event Hubs 자동 폴백
 
 새 소스 추가: SOURCES 리스트에 항목 추가만 하면 됨
 실행: python src/ingestion/universal_producer.py
@@ -33,7 +34,6 @@ from tenant_manager import TenantManager  # noqa: E402
 
 try:
     from kafka import KafkaProducer
-    from kafka.errors import NoBrokersAvailable
 
     KAFKA_AVAILABLE = True
 except ImportError:
@@ -83,6 +83,61 @@ SOURCES = [
     #     "enabled": False,
     # },
 ]
+
+
+# ── Event Hubs 폴백 설정 ─────────────────────────────────
+def _parse_eventhub_config() -> dict | None:
+    """Event Hubs 연결 문자열 → Kafka 호환 설정으로 변환"""
+    conn_str = os.getenv("EVENTHUB_CONNECTION_STRING")
+    if not conn_str:
+        return None
+    try:
+        parts = conn_str.split(";")
+        host = [p for p in parts if p.startswith("Endpoint=")][0]
+        host = host.replace("Endpoint=sb://", "").strip("/")
+        return {
+            "bootstrap_servers": f"{host}:9093",
+            "security_protocol": "SASL_SSL",
+            "sasl_mechanism": "PLAIN",
+            "sasl_plain_username": "$ConnectionString",
+            "sasl_plain_password": conn_str,
+            "value_serializer": lambda v: json.dumps(v, ensure_ascii=False).encode("utf-8"),
+            "acks": "all",
+            "retries": 3,
+        }
+    except Exception as e:
+        print(f"  ⚠️ Event Hubs 설정 파싱 실패: {e}")
+        return None
+
+
+def _create_producer() -> tuple:
+    """
+    Kafka 연결 시도 → 실패하면 Event Hubs로 자동 폴백
+    반환: (producer, 사용된_브로커_이름)
+    """
+    # 1차: Kafka 시도
+    print("  [1/2] Kafka 연결 시도...")
+    try:
+        producer = KafkaProducer(**KAFKA_PRODUCER_CONFIG)
+        print("  ✅ Kafka 연결 성공")
+        return producer, "kafka"
+    except Exception as e:
+        print(f"  ❌ Kafka 실패: {e}")
+
+    # 2차: Event Hubs 폴백
+    print("  [2/2] Event Hubs 폴백 시도...")
+    eh_config = _parse_eventhub_config()
+    if not eh_config:
+        print("  ❌ EVENTHUB_CONNECTION_STRING 없음")
+        return None, None
+
+    try:
+        producer = KafkaProducer(**eh_config)
+        print("  ✅ Event Hubs 연결 성공 (폴백)")
+        return producer, "eventhub"
+    except Exception as e:
+        print(f"  ❌ Event Hubs도 실패: {e}")
+        return None, None
 
 
 # ── SSE 파서 — 원본 전체 보존 ───────────────────────────
@@ -200,7 +255,7 @@ COLLECTOR_MAP = {
 def main():
     print("=" * 55)
     print("  DataSentinel — Universal Producer v2")
-    print("  원본 데이터 100% 보존 + 자동 재연결")
+    print("  원본 데이터 100% 보존 + 자동 재연결 + Event Hubs 폴백")
     print("=" * 55)
 
     print("\n[1/3] 토픽 확인 및 생성...")
@@ -221,17 +276,17 @@ def main():
     for company, topic in topics.items():
         print(f"  {company} → {topic}")
 
-    print("\n[2/3] Kafka Producer 초기화...")
+    print("\n[2/3] Producer 초기화 (Kafka → Event Hubs 자동 폴백)...")
     if not KAFKA_AVAILABLE:
         print("  ❌ kafka-python 미설치")
         return
 
-    try:
-        producer = KafkaProducer(**KAFKA_PRODUCER_CONFIG)
-        print("  ✅ 연결 성공")
-    except NoBrokersAvailable:
-        print("  ❌ Kafka 브로커 연결 실패")
+    producer, broker_type = _create_producer()
+    if not producer:
+        print("  ❌ Kafka, Event Hubs 모두 실패. 종료.")
         return
+
+    print(f"  사용 브로커: {broker_type}")
 
     print("\n[3/3] 수집 시작...")
     print("-" * 55)
