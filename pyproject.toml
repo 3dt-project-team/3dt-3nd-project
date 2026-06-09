@@ -14,30 +14,26 @@ dependencies = [
     "azure-storage-file-datalake>=12.19.0",  # ADLS Gen2 파일 접근
     "azure-storage-blob>=12.28.0",
     "azure-core>=1.39.0",
-
     # API 서버
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.32.0",
     "pydantic>=2.10.0",
-
     # DB
     "psycopg[binary]>=3.2.0",               # PostgreSQL 네이티브 드라이버
     "sqlalchemy>=2.0.0",                     # ORM / pandas read_sql 지원
     "redis>=5.2.0",                          # Redis 클라이언트
-
     # Kafka
     "confluent-kafka>=2.6.0",               # Apache Kafka Producer/Consumer
     "kafka-python>=2.3.1",                  # KafkaProducer used by wiki_events_collectors
     "sseclient-py>=1.9.0",                  # Wikimedia SSE stream client
-
     # 데이터 처리
     "pandas>=2.2.0",
     "pyarrow>=18.0.0",
     "numpy>=2.0.0",
-
     # HTTP (외부 API 호출용 - aT, 기상청)
     "httpx>=0.28.0",
     "python-dotenv>=1.0.0",                  # 로컬 .env 파일 로드
+    "psycopg2-binary>=2.9.12",
 ]
 
 # ── 선택 의존성 ────────────────────────────────────────────────────────────────
