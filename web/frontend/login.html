@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>DataCops DataOps Platform - Login</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-slate-900 flex justify-center items-center h-screen m-0">
+
+    <div class="bg-slate-800 p-10 rounded-2xl shadow-2xl w-96 border border-slate-700/50 text-center">
+        <h2 class="text-2xl font-black tracking-wider text-indigo-400 mb-2">⚡ DataCops</h2>
+        <p class="text-xs text-slate-400 mb-8 uppercase tracking-widest font-semibold">Data Observability Cloud</p>
+        
+        <div class="space-y-4 text-left">
+            <div>
+                <label class="text-xs font-bold text-slate-400 block mb-1">Email Address</label>
+                <input type="text" id="email" value="admin@wiki-corp.com" class="w-full p-3 bg-slate-950 border border-slate-700 rounded-lg text-white font-medium focus:outline-indigo-500">
+            </div>
+            <div>
+                <label class="text-xs font-bold text-slate-400 block mb-1">Password</label>
+                <input type="password" id="password" value="1234" class="w-full p-3 bg-slate-950 border border-slate-700 rounded-lg text-white font-medium focus:outline-indigo-500">
+            </div>
+        </div>
+
+        <button onclick="handleLogin()" class="w-full p-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg mt-8 transition-all cursor-pointer">
+            Sign In
+        </button>
+        
+        <p id="error-msg" class="text-xs text-rose-400 mt-4 font-medium hidden">⚠️ 인증에 실패했습니다.</p>
+    </div>
+
+    <script>
+        async function handleLogin() {
+            const emailInput = document.getElementById('email').value;
+            const passwordInput = document.getElementById('password').value;
+            const errorMsg = document.getElementById('error-msg');
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: emailInput, password: passwordInput })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.status === "success") {
+                    localStorage.setItem('domain_name', result.user_info.domain_name);
+                    localStorage.setItem('company_name', result.user_info.company_name);
+                    window.location.href = 'dashboard.html';
+                } else {
+                    errorMsg.innerText = "⚠️ " + (result.detail || "로그인 정보가 일치하지 않습니다.");
+                    errorMsg.classList.remove('hidden');
+                }
+            } catch (error) {
+                errorMsg.innerText = "⚠️ 백엔드 API 서버가 응답하지 않습니다.";
+                errorMsg.classList.remove('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
