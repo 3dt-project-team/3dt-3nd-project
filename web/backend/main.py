@@ -40,17 +40,11 @@ def get_db_config_from_vault():
             "port": 5432
         }
     except Exception as e:
+        # 🚨 [보안 고도화] 하드코딩 백업 주소를 완전히 제거했습니다.
+        # Key Vault 연결에 실패하면 서버 구동 자체를 차단하여 인프라를 보호합니다.
         print(f"❌ Key Vault에서 DB 설정을 가져오는데 실패했습니다: {e}")
-        # 로컬 환경 백업용 임시 연결 정보 (권한 에러 발생 시 우회용)
-        return {
-            "host": "datacops-web-db.postgres.database.azure.com",
-            "database": "postgres",
-            "user": "azureadmin",
-            "password": "여기에_임시_비밀번호", 
-            "port": 5432
-        }
+        raise RuntimeError("Key Vault 연결 실패로 인해 치명적인 DB 접속 정보를 로드할 수 없습니다.") from e
 
-# 🗺️ 이제 소스코드 어디를 봐도 중요한 인프라 정보가 단 한 줄도 노출되지 않습니다!
 DB_CONFIG = get_db_config_from_vault()
 
 
