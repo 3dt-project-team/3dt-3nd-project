@@ -124,7 +124,7 @@
             document.getElementById('user-display').innerText = `${companyName} 관리자 계정`;
 
             try {
-                const response = await fetch('http://127.0.0.1:8000/api/dashboard');
+                const response = await fetch('/api/dashboard');
                 const result = await response.json();
                 
                 if (result.status === "success" && result.data.length > 0) {
