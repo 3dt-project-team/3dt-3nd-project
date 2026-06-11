@@ -9,6 +9,9 @@ from psycopg2.extras import RealDictCursor
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 
+from fastapi.responses import FileResponse
+import os
+
 app = FastAPI(title="DataCops 품질 관제 플랫폼 API")
 
 app.add_middleware(
@@ -113,3 +116,26 @@ def login_user(login_info: LoginRequest):
         raise he
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"서버 오류: {str(e)}")
+    
+
+    # 📂 프론트엔드 파일들이 있는 절대/상대 경로 설정
+# 컨테이너 배포 환경과 로컬 환경을 모두 호환하기 위함입니다.
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
+
+@app.get("/")
+def read_index():
+    # 사용자가 그냥 주소만 치고 들어오면 메인 홈 화면(index.html)을 띄워줍니다.
+    return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
+
+@app.get("/login.html")
+@app.get("/login")
+def read_login():
+    # /login 으로 접속하면 로그인 화면을 띄워줍니다.
+    return FileResponse(os.path.join(FRONTEND_DIR, "login.html"))
+
+@app.get("/dashboard.html")
+@app.get("/dashboard")
+def read_dashboard():
+    # /dashboard 로 접속하면 대시보드 화면을 띄워줍니다.
+    return FileResponse(os.path.join(FRONTEND_DIR, "dashboard.html"))
