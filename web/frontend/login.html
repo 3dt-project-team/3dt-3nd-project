@@ -14,7 +14,7 @@
         <div class="space-y-4 text-left">
             <div>
                 <label class="text-xs font-bold text-slate-400 block mb-1">Email Address</label>
-                <input type="text" id="email" value="admin@wiki-corp.com" class="w-full p-3 bg-slate-950 border border-slate-700 rounded-lg text-white font-medium focus:outline-indigo-500">
+                <input type="text" id="email" value="admin@transport-corp.com" class="w-full p-3 bg-slate-950 border border-slate-700 rounded-lg text-white font-medium focus:outline-indigo-500">
             </div>
             <div>
                 <label class="text-xs font-bold text-slate-400 block mb-1">Password</label>
@@ -36,7 +36,7 @@
             const errorMsg = document.getElementById('error-msg');
 
             try {
-                const response = await fetch('http://127.0.0.1:8000/api/login', {
+                const response = await fetch('/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: emailInput, password: passwordInput })
