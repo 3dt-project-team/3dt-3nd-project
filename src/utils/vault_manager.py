@@ -302,6 +302,37 @@ class KeyVaultManager:
             return psycopg.connect(psycopg_uri)
         else:
             return psycopg.connect(connection_string)
+    
+    def get_kafka_producer(self) -> "Producer":
+        """Kafka Producer를 반환합니다.
+
+            Key Vault 시크릿:
+            kafka-bootstrap-servers : Kafka 브로커 주소 (콤마 구분)
+            kafka-username          : SASL 사용자명
+            kafka-password          : SASL 비밀번호
+            """
+        from confluent_kafka import Producer
+
+        bootstrap = self.get_secret("kafka-bootstrap-servers")
+        username  = self.get_secret("kafka-username")
+        password  = self.get_secret("kafka-password")
+
+        if not all([bootstrap, username, password]):
+            raise ValueError(
+                "Kafka 연결에 필요한 시크릿이 누락되었습니다. "
+                "Key Vault에 kafka-bootstrap-servers / kafka-username / kafka-password를 등록하세요."
+            )
+
+        conf = {
+            "bootstrap.servers": bootstrap,
+            "security.protocol": "SASL_PLAINTEXT",
+            "sasl.mechanism":    "SCRAM-SHA-256",
+            "sasl.username":     username,
+            "sasl.password":     password,
+        }
+        producer = Producer(conf)
+        print(f"[OK] Kafka Producer 연결 완료: {bootstrap}")
+        return producer
 
 
 # 모듈 레벨 싱글톤 — 다른 모듈에서 바로 import해서 사용
