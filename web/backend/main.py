@@ -198,14 +198,22 @@ FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 # ── 📊 데이터 로직 API 영역 ──────────────────────────────────
 
 
+# 📊 대시보드 통계 데이터를 PostgreSQL에서 꺼내오는 API
 @app.get("/api/dashboard")
 def get_dashboard_data():
     try:
         conn = psycopg2.connect(**DB_CONFIG, cursor_factory=RealDictCursor)
         cursor = conn.cursor()
 
+        # 💡 실제 DB 컬럼명으로 수정하되, AS를 붙여 기존 변수명으로 변경해줍니다!
         query = """
-            SELECT window_start, domain_name, total_cnt, clean_cnt, error_cnt, purity_rate 
+            SELECT 
+                window_start, 
+                domain_name, 
+                total_ingested_rows AS total_cnt, 
+                passed_rows AS clean_cnt, 
+                quarantined_rows AS error_cnt, 
+                data_purity_rate AS purity_rate 
             FROM web_main_dashboard
             ORDER BY window_start DESC;
         """
