@@ -14,7 +14,7 @@
         <div class="space-y-4 text-left">
             <div>
                 <label class="text-xs font-bold text-slate-400 block mb-1">Email Address</label>
-                <input type="text" id="email" value="admin@wiki-corp.com" class="w-full p-3 bg-slate-950 border border-slate-700 rounded-lg text-white font-medium focus:outline-indigo-500">
+                <input type="text" id="email" value="admin@transport-corp.com" class="w-full p-3 bg-slate-950 border border-slate-700 rounded-lg text-white font-medium focus:outline-indigo-500">
             </div>
             <div>
                 <label class="text-xs font-bold text-slate-400 block mb-1">Password</label>
@@ -45,6 +45,7 @@
                 const result = await response.json();
 
                 if (response.ok && result.status === "success") {
+                    localStorage.setItem('email', emailInput);
                     localStorage.setItem('domain_name', result.user_info.domain_name);
                     localStorage.setItem('company_name', result.user_info.company_name);
                     window.location.href = 'dashboard.html';
