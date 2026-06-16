@@ -30,6 +30,7 @@ dependencies = [
     "pandas>=2.2.0",
     "pyarrow>=18.0.0",
     "numpy>=2.0.0",
+    "kagglehub>=0.3.0",                       # Kaggle 데이터셋 다운로드 (골든셋 생성용)
     # HTTP (외부 API 호출용 - aT, 기상청)
     "httpx>=0.28.0",
     "python-dotenv>=1.0.0",                  # 로컬 .env 파일 로드
