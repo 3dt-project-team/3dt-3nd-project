@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DataCops - AI 규칙 관리</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans">
+
+<!-- ── 규칙 편집/추가 모달 ── -->
+<div id="rule-modal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white">
+            <h3 id="modal-title" class="font-bold text-slate-800">규칙 편집</h3>
+            <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 text-xl cursor-pointer">✕</button>
+        </div>
+        <div class="p-6 space-y-4">
+
+            <!-- 규칙 대상 유형 (추가 시만 표시) -->
+            <div id="field-ruletype-section" class="hidden">
+                <label class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">규칙 종류</label>
+                <select id="field-ruletype" onchange="onRuleTypeChange()"
+                    class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-indigo-500">
+                    <option value="expectation">데이터 검증 규칙 (Expectation)</option>
+                    <option value="anomaly">이상치 탐지 규칙 (Anomaly)</option>
+                </select>
+            </div>
+
+            <!-- 컬럼명 -->
+            <div id="field-col-display">
+                <label class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">컬럼 / 규칙명</label>
+                <div id="col-display" class="font-mono font-bold text-indigo-700 text-sm bg-slate-50 px-3 py-2 rounded-lg"></div>
+            </div>
+            <div id="field-col-input" class="hidden">
+                <label class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">컬럼명 <span class="text-rose-400">*</span></label>
+                <input type="text" id="col-input" placeholder="예: user_id, 부상, title"
+                    class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-indigo-500">
+            </div>
+
+            <!-- Expectation 유형 (추가 시만) -->
+            <div id="field-exp-type" class="hidden">
+                <label class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">검증 유형 <span class="text-rose-400">*</span></label>
+                <select id="exp-type-select" onchange="onExpTypeChange()"
+                    class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-indigo-500">
+                    <option value="expect_column_values_to_not_be_null">NOT NULL — 필수값 검사</option>
+                    <option value="expect_column_values_to_be_in_set">ALLOWED VALUES — 허용값 목록</option>
+                    <option value="expect_column_values_to_be_unique">UNIQUE — 중복 금지</option>
+                    <option value="expect_column_values_to_match_regex">REGEX — 정규식 패턴</option>
+                </select>
+            </div>
+
+            <!-- 심각도 (Expectation) -->
+            <div id="field-severity">
+                <label class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">심각도</label>
+                <select id="edit-severity"
+                    class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-indigo-500">
+                    <option value="critical">critical — 위반 시 즉시 격리</option>
+                    <option value="warning">warning — 경고만 기록</option>
+                    <option value="info">info — 정보성 기록</option>
+                </select>
+            </div>
+
+            <!-- 허용값 (ALLOWED VALUES) -->
+            <div id="field-valueset" class="hidden">
+                <label class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">허용값 (쉼표로 구분)</label>
+                <textarea id="edit-valueset" rows="3"
+                    class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-indigo-500"
+                    placeholder="값1, 값2, 값3"></textarea>
+            </div>
+
+            <!-- 정규식 패턴 -->
+            <div id="field-regex" class="hidden">
+                <label class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">정규식 패턴</label>
+                <input type="text" id="edit-regex" placeholder="예: ^\d{4}-\d{2}-\d{2}$"
+                    class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-indigo-500">
+            </div>
+
+            <!-- 이상치 탐지 전용 필드들 -->
+            <div id="field-anomaly-name" class="hidden">
+                <label class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">규칙명 <span class="text-rose-400">*</span></label>
+                <input type="text" id="anomaly-name-input" placeholder="예: 부상자수_이상치"
+                    class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-indigo-500">
+            </div>
+            <div id="field-anomaly-method" class="hidden">
+                <label class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">탐지 방법</label>
+                <select id="anomaly-method"
+                    class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-indigo-500">
+                    <option value="zscore">Z-Score (표준편차 기반)</option>
+                    <option value="iqr">IQR (사분위 범위 기반)</option>
+                    <option value="frequency">Frequency (빈도 기반)</option>
+                </select>
+            </div>
+            <div id="field-threshold">
+                <label class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">임계값</label>
+                <input type="number" id="edit-threshold" step="0.1" placeholder="예: 3.0"
+                    class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-indigo-500">
+            </div>
+
+            <!-- 변경 메모 -->
+            <div>
+                <label class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">변경 메모 (선택)</label>
+                <input type="text" id="edit-note" placeholder="예: 허용값 범위 조정"
+                    class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-indigo-500">
+            </div>
+        </div>
+        <div class="px-6 py-4 border-t border-slate-100 flex justify-end space-x-3 sticky bottom-0 bg-white">
+            <button onclick="closeModal()" class="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 cursor-pointer">취소</button>
+            <button onclick="saveModal()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-lg cursor-pointer">저장 (새 버전)</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── 버전 히스토리 패널 ── -->
+<div id="version-panel" class="fixed right-0 top-0 h-full w-80 bg-white shadow-2xl border-l border-slate-200 hidden z-40 flex flex-col">
+    <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center">
+        <h3 class="font-bold text-slate-800 text-sm">버전 히스토리</h3>
+        <button onclick="closeVersionPanel()" class="text-slate-400 hover:text-slate-600 cursor-pointer">✕</button>
+    </div>
+    <div id="version-list" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
+</div>
+
+<nav class="bg-slate-900 text-white px-8 py-4 flex justify-between items-center shadow-md">
+    <div class="flex items-center space-x-3">
+        <span class="text-xl font-black tracking-wider text-indigo-400">⚡ DataCops</span>
+        <span class="text-sm font-semibold text-slate-400">| Data Observability Cloud</span>
+    </div>
+    <div class="flex items-center space-x-6">
+        <a href="dashboard.html" class="text-xs text-slate-400 hover:text-white transition-colors">대시보드</a>
+        <span class="text-xs text-indigo-300 font-bold border-b border-indigo-400 pb-0.5">AI 규칙 관리</span>
+        <span id="user-display" class="text-sm text-slate-300 font-medium"></span>
+        <button onclick="handleLogout()" class="text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition-all cursor-pointer">
+            로그아웃
+        </button>
+    </div>
+</nav>
+
+<main class="max-w-6xl mx-auto p-8 space-y-8">
+
+    <div class="flex justify-between items-start border-b border-slate-200 pb-5">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">AI 생성 규칙 관리</h1>
+            <p class="text-sm text-slate-500 mt-1">데이터 소스를 선택해 AI가 자동 생성한 검증 규칙을 확인하고 편집합니다.</p>
+        </div>
+        <div class="flex items-center space-x-3">
+            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">데이터 소스</label>
+            <select id="domain-select" onchange="onDomainChange()"
+                class="bg-white border border-slate-300 rounded-lg px-4 py-2 font-semibold text-sm shadow-xs focus:outline-indigo-500 min-w-52">
+                <option value="">-- 선택하세요 --</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="state-init" class="text-center py-20 text-slate-400">
+        <div class="text-4xl mb-3">☝️</div>
+        <p class="font-medium">위에서 데이터 소스를 선택하세요.</p>
+    </div>
+    <div id="state-loading" class="hidden text-center py-20 text-slate-400">
+        <div class="text-4xl mb-3">⏳</div>
+        <p class="font-medium">규칙을 불러오는 중...</p>
+    </div>
+    <div id="state-empty" class="hidden text-center py-20 text-slate-400">
+        <div class="text-4xl mb-3">📭</div>
+        <p class="font-medium">아직 생성된 규칙이 없습니다.</p>
+        <p class="text-sm mt-1">파일을 업로드하면 AI가 자동으로 규칙을 생성합니다.</p>
+    </div>
+    <div id="state-error" class="hidden text-center py-20 text-rose-400">
+        <div class="text-4xl mb-3">⚠️</div>
+        <p id="error-msg" class="font-medium"></p>
+    </div>
+
+    <div id="rules-content" class="hidden space-y-6">
+
+        <!-- 버전 배너 -->
+        <div class="bg-indigo-50 border border-indigo-200 rounded-xl px-5 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <span class="text-xs font-bold text-indigo-500 uppercase tracking-wider">현재 활성 버전</span>
+                <span id="current-version-badge" class="bg-indigo-600 text-white text-xs font-black px-3 py-1 rounded-full"></span>
+                <span id="current-version-note" class="text-xs text-indigo-600"></span>
+            </div>
+            <button onclick="openVersionPanel()" class="text-xs bg-white border border-indigo-200 text-indigo-600 hover:bg-indigo-50 px-3 py-1.5 rounded-lg font-bold cursor-pointer transition-colors">
+                📋 버전 히스토리
+            </button>
+        </div>
+
+        <!-- 요약 카드 -->
+        <div class="grid grid-cols-3 gap-5">
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">전체 규칙</span>
+                <span id="stat-total" class="text-3xl font-extrabold text-slate-900 block mt-1">0</span>
+            </div>
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
+                <span class="text-xs font-bold text-emerald-500 uppercase tracking-wider">활성</span>
+                <span id="stat-active" class="text-3xl font-extrabold text-emerald-600 block mt-1">0</span>
+            </div>
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">비활성</span>
+                <span id="stat-inactive" class="text-3xl font-extrabold text-slate-400 block mt-1">0</span>
+            </div>
+        </div>
+
+        <!-- 검증 규칙 테이블 -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                <h2 class="text-sm font-bold text-slate-700">🛡️ 데이터 검증 규칙 (Expectations)</h2>
+                <div class="flex items-center space-x-3">
+                    <span id="exp-count" class="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded font-bold"></span>
+                    <button onclick="openCreateModal('expectation')"
+                        class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg font-bold cursor-pointer transition-colors">
+                        + 규칙 추가
+                    </button>
+                </div>
+            </div>
+            <table class="w-full text-left text-xs">
+                <thead>
+                    <tr class="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold border-b border-slate-200">
+                        <th class="px-5 py-3">컬럼</th>
+                        <th class="px-5 py-3">규칙 유형</th>
+                        <th class="px-5 py-3">심각도</th>
+                        <th class="px-5 py-3">허용값 / 조건</th>
+                        <th class="px-5 py-3 text-center">활성화</th>
+                        <th class="px-5 py-3 text-center">편집</th>
+                        <th class="px-5 py-3 text-center">삭제</th>
+                    </tr>
+                </thead>
+                <tbody id="exp-tbody" class="divide-y divide-slate-100 text-slate-700 font-medium"></tbody>
+            </table>
+        </div>
+
+        <!-- 이상치 탐지 규칙 테이블 -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                <h2 class="text-sm font-bold text-slate-700">📊 이상치 탐지 규칙 (Anomaly Detection)</h2>
+                <div class="flex items-center space-x-3">
+                    <span id="anomaly-count" class="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded font-bold"></span>
+                    <button onclick="openCreateModal('anomaly')"
+                        class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg font-bold cursor-pointer transition-colors">
+                        + 규칙 추가
+                    </button>
+                </div>
+            </div>
+            <table class="w-full text-left text-xs">
+                <thead>
+                    <tr class="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold border-b border-slate-200">
+                        <th class="px-5 py-3">규칙명</th>
+                        <th class="px-5 py-3">대상 컬럼</th>
+                        <th class="px-5 py-3">탐지 방법</th>
+                        <th class="px-5 py-3">임계값</th>
+                        <th class="px-5 py-3 text-center">활성화</th>
+                        <th class="px-5 py-3 text-center">편집</th>
+                        <th class="px-5 py-3 text-center">삭제</th>
+                    </tr>
+                </thead>
+                <tbody id="anomaly-tbody" class="divide-y divide-slate-100 text-slate-700 font-medium"></tbody>
+            </table>
+        </div>
+
+    </div>
+</main>
+
+<div id="toast" class="fixed bottom-6 right-6 hidden text-sm px-5 py-3 rounded-xl shadow-lg font-medium text-white"></div>
+
+<script>
+    const email = localStorage.getItem('email');
+    const companyName = localStorage.getItem('company_name');
+    let currentDomain = null;
+    let rulesData = null;
+    let modalMode = null; // 'edit-exp' | 'edit-anomaly' | 'create-exp' | 'create-anomaly'
+    let editIndex = null;
+
+    if (!email) window.location.href = 'login.html';
+    document.getElementById('user-display').innerText = `${companyName || ''} 관리자`;
+
+    function handleLogout() { localStorage.clear(); window.location.href = 'login.html'; }
+
+    function showState(name) {
+        ['init','loading','empty','error'].forEach(s =>
+            document.getElementById(`state-${s}`).classList.add('hidden'));
+        document.getElementById('rules-content').classList.add('hidden');
+        if (name === 'rules') document.getElementById('rules-content').classList.remove('hidden');
+        else document.getElementById(`state-${name}`).classList.remove('hidden');
+    }
+
+    function showToast(msg, ok = true) {
+        const t = document.getElementById('toast');
+        t.innerText = msg;
+        t.className = `fixed bottom-6 right-6 text-sm px-5 py-3 rounded-xl shadow-lg font-medium text-white ${ok ? 'bg-emerald-700' : 'bg-rose-700'}`;
+        t.classList.remove('hidden');
+        setTimeout(() => t.classList.add('hidden'), 2800);
+    }
+
+    function severityBadge(s) {
+        const map = { critical:'bg-rose-100 text-rose-700 border border-rose-200', warning:'bg-amber-100 text-amber-700 border border-amber-200', info:'bg-blue-100 text-blue-700 border border-blue-200' };
+        return `<span class="px-2 py-0.5 rounded text-xs font-bold ${map[s]||'bg-slate-100 text-slate-600'}">${s}</span>`;
+    }
+
+    function ruleLabel(t) {
+        const map = { 'expect_column_values_to_not_be_null':'NOT NULL','expect_column_values_to_be_in_set':'ALLOWED VALUES','expect_column_values_to_be_unique':'UNIQUE','expect_column_values_to_match_regex':'REGEX' };
+        return map[t] || t.replace('expect_column_values_to_','').toUpperCase();
+    }
+
+    function makeToggle(checked, ruleType, index) {
+        const id = `tgl_${ruleType}_${index}`;
+        return `<label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="${id}" ${checked ? 'checked' : ''} onchange="handleToggle('${ruleType}',${index},this)" class="sr-only peer">
+            <div class="w-10 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+        </label>`;
+    }
+
+    function updateStats() {
+        if (!rulesData) return;
+        const all = [...(rulesData.expectations||[]), ...(rulesData.anomaly_rules||[])];
+        const active = all.filter(r => r.enabled !== false).length;
+        document.getElementById('stat-total').innerText = all.length;
+        document.getElementById('stat-active').innerText = active;
+        document.getElementById('stat-inactive').innerText = all.length - active;
+    }
+
+    // ── 저장 헬퍼 ──────────────────────────────────────────────
+    async function persistRules(note) {
+        const res = await fetch('/api/rules/save', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({email, domain: currentDomain, rules: rulesData, note})
+        });
+        if (!res.ok) { showToast('저장 실패', false); return null; }
+        return await res.json();
+    }
+
+    // ── 토글 ───────────────────────────────────────────────────
+    async function handleToggle(ruleType, index, el) {
+        const rule = rulesData[ruleType][index];
+        rule.enabled = el.checked;
+        const col = rule.column || rule.name || '';
+        const action = el.checked ? '활성화' : '비활성화';
+        const result = await persistRules(`${col} 규칙 ${action}`);
+        if (!result) { rule.enabled = !el.checked; el.checked = !el.checked; return; }
+        el.closest('tr').classList.toggle('opacity-40', !el.checked);
+        showToast(`${action}됨 — v${result.version_num} 저장`);
+        updateStats();
+        await loadVersions();
+    }
+
+    // ── 삭제 ───────────────────────────────────────────────────
+    async function deleteRule(ruleType, index) {
+        const rule = rulesData[ruleType][index];
+        const label = rule.column || rule.name || `규칙 #${index+1}`;
+        if (!confirm(`"${label}" 규칙을 삭제합니다. 새 버전으로 저장됩니다. 계속할까요?`)) return;
+        rulesData[ruleType].splice(index, 1);
+        const result = await persistRules(`${label} 규칙 삭제`);
+        if (!result) { location.reload(); return; }
+        showToast(`삭제됨 — v${result.version_num} 저장`);
+        renderAll();
+        await loadVersions();
+    }
+
+    // ── 모달: 필드 표시 제어 ───────────────────────────────────
+    function setFieldVisibility(fields) {
+        const all = ['field-ruletype-section','field-col-display','field-col-input','field-exp-type','field-severity','field-valueset','field-regex','field-anomaly-name','field-anomaly-method','field-threshold'];
+        all.forEach(id => document.getElementById(id).classList.add('hidden'));
+        fields.forEach(id => document.getElementById(id).classList.remove('hidden'));
+    }
+
+    function onRuleTypeChange() {
+        const val = document.getElementById('field-ruletype').value;
+        if (val === 'expectation') {
+            setFieldVisibility(['field-ruletype-section','field-col-input','field-exp-type','field-severity']);
+            onExpTypeChange();
+        } else {
+            setFieldVisibility(['field-ruletype-section','field-col-input','field-anomaly-name','field-anomaly-method','field-threshold']);
+        }
+    }
+
+    function onExpTypeChange() {
+        const type = document.getElementById('exp-type-select').value;
+        document.getElementById('field-valueset').classList.toggle('hidden', type !== 'expect_column_values_to_be_in_set');
+        document.getElementById('field-regex').classList.toggle('hidden', type !== 'expect_column_values_to_match_regex');
+    }
+
+    // ── 모달 열기: 편집 ────────────────────────────────────────
+    function openEditModal(ruleType, index) {
+        modalMode = ruleType === 'expectations' ? 'edit-exp' : 'edit-anomaly';
+        editIndex = index;
+        const rule = rulesData[ruleType][index];
+        document.getElementById('modal-title').innerText = '규칙 편집';
+        document.getElementById('edit-note').value = '';
+
+        if (ruleType === 'expectations') {
+            setFieldVisibility(['field-col-display','field-severity','field-threshold']);
+            document.getElementById('col-display').innerText = rule.column || '—';
+            document.getElementById('edit-severity').value = rule.severity || 'warning';
+            if (rule.expectation_type === 'expect_column_values_to_be_in_set') {
+                document.getElementById('field-valueset').classList.remove('hidden');
+                document.getElementById('edit-valueset').value = (rule.kwargs?.value_set || []).join(', ');
+            }
+            if (rule.expectation_type === 'expect_column_values_to_match_regex') {
+                document.getElementById('field-regex').classList.remove('hidden');
+                document.getElementById('edit-regex').value = rule.kwargs?.regex || '';
+            }
+            document.getElementById('edit-threshold').value = '';
+            document.getElementById('field-threshold').classList.add('hidden');
+        } else {
+            setFieldVisibility(['field-col-display','field-anomaly-method','field-threshold']);
+            document.getElementById('col-display').innerText = rule.name || '—';
+            document.getElementById('anomaly-method').value = rule.method || 'zscore';
+            document.getElementById('edit-threshold').value = rule.threshold ?? '';
+        }
+        document.getElementById('rule-modal').classList.remove('hidden');
+    }
+
+    // ── 모달 열기: 추가 ────────────────────────────────────────
+    function openCreateModal(type) {
+        modalMode = type === 'expectation' ? 'create-exp' : 'create-anomaly';
+        editIndex = null;
+        document.getElementById('modal-title').innerText = type === 'expectation' ? '검증 규칙 추가' : '이상치 탐지 규칙 추가';
+        document.getElementById('edit-note').value = '';
+        document.getElementById('col-input').value = '';
+        document.getElementById('edit-valueset').value = '';
+        document.getElementById('edit-regex').value = '';
+        document.getElementById('edit-threshold').value = '';
+        document.getElementById('anomaly-name-input').value = '';
+
+        if (type === 'expectation') {
+            document.getElementById('field-ruletype').value = 'expectation';
+            setFieldVisibility(['field-ruletype-section','field-col-input','field-exp-type','field-severity']);
+            document.getElementById('exp-type-select').value = 'expect_column_values_to_not_be_null';
+            document.getElementById('edit-severity').value = 'warning';
+            onExpTypeChange();
+        } else {
+            document.getElementById('field-ruletype').value = 'anomaly';
+            setFieldVisibility(['field-ruletype-section','field-col-input','field-anomaly-name','field-anomaly-method','field-threshold']);
+        }
+        document.getElementById('rule-modal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+        document.getElementById('rule-modal').classList.add('hidden');
+        modalMode = null; editIndex = null;
+    }
+
+    // ── 모달 저장 ──────────────────────────────────────────────
+    async function saveModal() {
+        const note = document.getElementById('edit-note').value;
+
+        if (modalMode === 'edit-exp') {
+            const rule = rulesData.expectations[editIndex];
+            rule.severity = document.getElementById('edit-severity').value;
+            if (rule.expectation_type === 'expect_column_values_to_be_in_set') {
+                rule.kwargs = rule.kwargs || {};
+                rule.kwargs.value_set = document.getElementById('edit-valueset').value.split(',').map(v=>v.trim()).filter(Boolean);
+            }
+            if (rule.expectation_type === 'expect_column_values_to_match_regex') {
+                rule.kwargs = rule.kwargs || {};
+                rule.kwargs.regex = document.getElementById('edit-regex').value.trim();
+            }
+
+        } else if (modalMode === 'edit-anomaly') {
+            const rule = rulesData.anomaly_rules[editIndex];
+            rule.method = document.getElementById('anomaly-method').value;
+            const th = document.getElementById('edit-threshold').value;
+            if (th !== '') rule.threshold = parseFloat(th);
+
+        } else if (modalMode === 'create-exp') {
+            const col = document.getElementById('col-input').value.trim();
+            if (!col) { alert('컬럼명을 입력하세요.'); return; }
+            const expType = document.getElementById('exp-type-select').value;
+            const newRule = {
+                column: col,
+                expectation_type: expType,
+                severity: document.getElementById('edit-severity').value,
+                error_code: `ERROR_${col.toUpperCase()}_${ruleLabel(expType).replace(' ','_')}`,
+                enabled: true,
+                kwargs: {}
+            };
+            if (expType === 'expect_column_values_to_be_in_set') {
+                newRule.kwargs.value_set = document.getElementById('edit-valueset').value.split(',').map(v=>v.trim()).filter(Boolean);
+            }
+            if (expType === 'expect_column_values_to_match_regex') {
+                newRule.kwargs.regex = document.getElementById('edit-regex').value.trim();
+            }
+            rulesData.expectations = rulesData.expectations || [];
+            rulesData.expectations.push(newRule);
+
+        } else if (modalMode === 'create-anomaly') {
+            const col = document.getElementById('col-input').value.trim();
+            const name = document.getElementById('anomaly-name-input').value.trim();
+            if (!col) { alert('컬럼명을 입력하세요.'); return; }
+            if (!name) { alert('규칙명을 입력하세요.'); return; }
+            const th = document.getElementById('edit-threshold').value;
+            const newRule = {
+                name,
+                columns: [col],
+                method: document.getElementById('anomaly-method').value,
+                threshold: th !== '' ? parseFloat(th) : null,
+                enabled: true
+            };
+            rulesData.anomaly_rules = rulesData.anomaly_rules || [];
+            rulesData.anomaly_rules.push(newRule);
+        }
+
+        const actionLabel = modalMode.startsWith('create') ? '규칙 추가' : '규칙 편집';
+        const result = await persistRules(note || actionLabel);
+        if (!result) return;
+        showToast(`저장 완료 — v${result.version_num}`);
+        closeModal();
+        renderAll();
+        updateStats();
+        await loadVersions();
+    }
+
+    // ── 버전 히스토리 ──────────────────────────────────────────
+    async function loadVersions() {
+        if (!currentDomain) return;
+        try {
+            const res = await fetch(`/api/rules/versions?email=${encodeURIComponent(email)}&domain=${encodeURIComponent(currentDomain)}`);
+            if (!res.ok) return;
+            const { versions } = await res.json();
+            const active = versions?.find(v => v.is_active);
+            document.getElementById('current-version-badge').innerText = active ? `v${active.version_num}` : '—';
+            document.getElementById('current-version-note').innerText = active?.note || '';
+            document.getElementById('version-list').innerHTML = (versions || []).map(v => `
+                <div class="rounded-xl border ${v.is_active ? 'border-indigo-300 bg-indigo-50' : 'border-slate-200 bg-white'} p-4 space-y-1.5">
+                    <div class="flex justify-between items-center">
+                        <span class="font-black text-sm ${v.is_active ? 'text-indigo-700' : 'text-slate-700'}">v${v.version_num}</span>
+                        ${v.is_active
+                            ? '<span class="text-xs bg-indigo-600 text-white px-2 py-0.5 rounded font-bold">활성</span>'
+                            : `<button onclick="activateVersion(${v.id})" class="text-xs bg-slate-100 hover:bg-indigo-100 text-slate-600 hover:text-indigo-700 px-2 py-0.5 rounded font-bold cursor-pointer">복원</button>`
+                        }
+                    </div>
+                    <p class="text-xs text-slate-600 font-medium">${v.note || ''}</p>
+                    <p class="text-xs text-slate-400">${new Date(v.created_at).toLocaleString('ko-KR')}</p>
+                    <p class="text-xs text-slate-400">${v.created_by || 'system'}</p>
+                </div>
+            `).join('');
+        } catch(e) { console.error(e); }
+    }
+
+    function openVersionPanel() { document.getElementById('version-panel').classList.remove('hidden'); }
+    function closeVersionPanel() { document.getElementById('version-panel').classList.add('hidden'); }
+
+    async function activateVersion(versionId) {
+        if (!confirm('이 버전을 활성화하면 파이프라인에 즉시 반영됩니다. 계속할까요?')) return;
+        const res = await fetch('/api/rules/activate', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({email, domain: currentDomain, version_id: versionId})
+        });
+        if (!res.ok) { showToast('복원 실패', false); return; }
+        const result = await res.json();
+        showToast(`v${result.activated_version} 복원 완료`);
+        await onDomainChange();
+    }
+
+    // ── 렌더링 ─────────────────────────────────────────────────
+    function renderAll() {
+        renderExpectations(rulesData.expectations || []);
+        renderAnomalyRules(rulesData.anomaly_rules || []);
+    }
+
+    function renderExpectations(list) {
+        document.getElementById('exp-count').innerText = `${list.length}개`;
+        document.getElementById('exp-tbody').innerHTML = list.length === 0
+            ? '<tr><td colspan="7" class="px-5 py-6 text-center text-slate-400">검증 규칙이 없습니다.</td></tr>'
+            : list.map((exp, i) => {
+                const vs = exp.kwargs?.value_set;
+                const condition = vs ? vs.slice(0,5).join(', ') + (vs.length > 5 ? ` 외 ${vs.length-5}개` : '') : (exp.kwargs?.regex || '—');
+                const enabled = exp.enabled !== false;
+                return `<tr class="hover:bg-slate-50 transition-colors ${enabled ? '' : 'opacity-40'}">
+                    <td class="px-5 py-3 font-mono font-bold text-indigo-700">${exp.column||'—'}</td>
+                    <td class="px-5 py-3"><span class="bg-slate-100 px-2 py-0.5 rounded font-bold">${ruleLabel(exp.expectation_type)}</span></td>
+                    <td class="px-5 py-3">${severityBadge(exp.severity||'warning')}</td>
+                    <td class="px-5 py-3 text-slate-500 max-w-xs truncate">${condition}</td>
+                    <td class="px-5 py-3 text-center">${makeToggle(enabled,'expectations',i)}</td>
+                    <td class="px-5 py-3 text-center">
+                        <button onclick="openEditModal('expectations',${i})" class="text-xs bg-slate-100 hover:bg-indigo-100 text-slate-600 hover:text-indigo-700 px-3 py-1 rounded font-bold cursor-pointer transition-colors">편집</button>
+                    </td>
+                    <td class="px-5 py-3 text-center">
+                        <button onclick="deleteRule('expectations',${i})" class="text-xs bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 px-3 py-1 rounded font-bold cursor-pointer transition-colors">삭제</button>
+                    </td>
+                </tr>`;
+            }).join('');
+    }
+
+    function renderAnomalyRules(list) {
+        document.getElementById('anomaly-count').innerText = `${list.length}개`;
+        document.getElementById('anomaly-tbody').innerHTML = list.length === 0
+            ? '<tr><td colspan="7" class="px-5 py-6 text-center text-slate-400">이상치 탐지 규칙이 없습니다.</td></tr>'
+            : list.map((rule, i) => {
+                const enabled = rule.enabled !== false;
+                return `<tr class="hover:bg-slate-50 transition-colors ${enabled ? '' : 'opacity-40'}">
+                    <td class="px-5 py-3 font-bold text-slate-700">${rule.name||'—'}</td>
+                    <td class="px-5 py-3 font-mono text-indigo-700">${(rule.columns||[]).join(', ')||'—'}</td>
+                    <td class="px-5 py-3"><span class="bg-purple-100 text-purple-700 px-2 py-0.5 rounded font-bold">${(rule.method||'').toUpperCase()}</span></td>
+                    <td class="px-5 py-3 text-slate-500">${rule.threshold??'—'}</td>
+                    <td class="px-5 py-3 text-center">${makeToggle(enabled,'anomaly_rules',i)}</td>
+                    <td class="px-5 py-3 text-center">
+                        <button onclick="openEditModal('anomaly_rules',${i})" class="text-xs bg-slate-100 hover:bg-indigo-100 text-slate-600 hover:text-indigo-700 px-3 py-1 rounded font-bold cursor-pointer transition-colors">편집</button>
+                    </td>
+                    <td class="px-5 py-3 text-center">
+                        <button onclick="deleteRule('anomaly_rules',${i})" class="text-xs bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 px-3 py-1 rounded font-bold cursor-pointer transition-colors">삭제</button>
+                    </td>
+                </tr>`;
+            }).join('');
+    }
+
+    // ── 도메인 선택 & 초기 로드 ────────────────────────────────
+    async function onDomainChange() {
+        const select = document.getElementById('domain-select');
+        currentDomain = select.value;
+        if (!currentDomain) { showState('init'); return; }
+        showState('loading');
+        try {
+            const res = await fetch(`/api/rules?email=${encodeURIComponent(email)}&domain=${encodeURIComponent(currentDomain)}`);
+            if (!res.ok) throw new Error((await res.json()).detail || '규칙 조회 실패');
+            const result = await res.json();
+            if (!result.rules) { showState('empty'); return; }
+            rulesData = result.rules;
+            renderAll();
+            updateStats();
+            showState('rules');
+            await loadVersions();
+        } catch(e) {
+            document.getElementById('error-msg').innerText = e.message;
+            showState('error');
+        }
+    }
+
+    async function loadDomains() {
+        try {
+            const res = await fetch(`/api/domains?email=${encodeURIComponent(email)}`);
+            if (!res.ok) throw new Error('도메인 목록 조회 실패');
+            const result = await res.json();
+            const select = document.getElementById('domain-select');
+            if (!result.domains?.length) {
+                select.innerHTML = '<option value="">등록된 데이터 소스 없음</option>';
+                showState('empty'); return;
+            }
+            result.domains.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d.bronze_folder;
+                opt.innerText = `${d.source_name || d.bronze_folder} (${d.data_source_type || d.bronze_folder})`;
+                select.appendChild(opt);
+            });
+            if (result.domains.length === 1) {
+                select.value = result.domains[0].bronze_folder;
+                onDomainChange();
+            }
+        } catch(e) {
+            document.getElementById('error-msg').innerText = e.message;
+            showState('error');
+        }
+    }
+
+    window.onload = loadDomains;
+</script>
+</body>
+</html>
