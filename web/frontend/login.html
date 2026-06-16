@@ -45,6 +45,7 @@
                 const result = await response.json();
 
                 if (response.ok && result.status === "success") {
+                    localStorage.setItem('email', emailInput);
                     localStorage.setItem('domain_name', result.user_info.domain_name);
                     localStorage.setItem('company_name', result.user_info.company_name);
                     window.location.href = 'dashboard.html';
