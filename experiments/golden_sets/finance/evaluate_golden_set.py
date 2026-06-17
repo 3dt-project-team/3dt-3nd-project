@@ -27,6 +27,9 @@ import re
 import sys
 from pathlib import Path
 
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    sys.stdout.reconfigure(encoding="utf-8")
+
 # ── 규칙 위반 판정 함수 ─────────────────────────────────────
 
 
@@ -223,7 +226,7 @@ def evaluate(rules_path: str, golden_path: str, anomaly_path: str | None = None)
     if failures:
         print(f"\n  [오답 {len(failures)}개]")
         for f in failures[:10]:
-            print(f"    [{f['type']}] {f['id']} — {f['note']}")
+            print(f"    [{f['type']}] {f['id']} - {f['note']}")
 
     # ── 이상치 규칙 골든셋 평가 ───────────────────────────
     if anomaly_path:
@@ -269,7 +272,7 @@ def evaluate(rules_path: str, golden_path: str, anomaly_path: str | None = None)
         if a_failures:
             print(f"\n  [오답 {len(a_failures)}개]")
             for f in a_failures:
-                print(f"    [{f['type']}] {f['id']} — {f['note']}")
+                print(f"    [{f['type']}] {f['id']} - {f['note']}")
 
     # ── 전체 요약 ──────────────────────────────────────────
     print(f"\n{'=' * 60}")

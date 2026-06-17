@@ -1,0 +1,294 @@
+{
+  "suite_name": "financial_transactions_quality_suite",
+  "domain": "financial_transactions",
+  "version": "1.0",
+  "generated_at": "2026-06-17T07:34:43.324975Z",
+  "model": "Llama-4-Maverick-17B-128E-Instruct-FP8",
+  "null_strategies": {
+    "Transaction_ID": {
+      "strategy": "drop",
+      "default_value": null,
+      "reason": "Identifier column"
+    },
+    "Transaction_Date": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column with null rate > 0.1"
+    },
+    "Customer_ID": {
+      "strategy": "drop",
+      "default_value": null,
+      "reason": "Identifier column"
+    },
+    "Product_Name": {
+      "strategy": "fill_default",
+      "default_value": "",
+      "reason": "Free-text column is not present but categorical, no action needed, however 'Product_Name' has dtype categorical, hence no fill_default"
+    },
+    "Quantity": {
+      "strategy": "fill_median",
+      "default_value": null,
+      "reason": "Skewed numeric column"
+    },
+    "Price": {
+      "strategy": "allow",
+      "default_value": null,
+      "reason": "null_rate > 0.8 is not met but close, however it's not > 0.8"
+    },
+    "Payment_Method": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column"
+    },
+    "Transaction_Status": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column with null rate > 0.1"
+    }
+  },
+  "expectations": [
+    {
+      "rule_id": "RULE_FINA_001",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Transaction_ID",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Transaction ID is a primary identifier and cannot be null"
+    },
+    {
+      "rule_id": "RULE_FINA_002",
+      "expectation_type": "expect_column_values_to_be_unique",
+      "column": "Transaction_ID",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Transaction ID must be unique"
+    },
+    {
+      "rule_id": "RULE_FINA_003",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Transaction_Date",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Transaction Date is required for transaction records"
+    },
+    {
+      "rule_id": "RULE_FINA_004",
+      "expectation_type": "expect_column_values_to_match_regex",
+      "column": "Transaction_Date",
+      "kwargs": {
+        "regex": "^\\d{4}-\\d{2}-\\d{2}$"
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Transaction Date must be in YYYY-MM-DD format"
+    },
+    {
+      "rule_id": "RULE_FINA_005",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Customer_ID",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Customer ID is required for transaction records"
+    },
+    {
+      "rule_id": "RULE_FINA_006",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Product_Name",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Product Name is required for transaction records"
+    },
+    {
+      "rule_id": "RULE_FINA_007",
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "column": "Product_Name",
+      "kwargs": {
+        "value_set": [
+          "Headphones",
+          "Coffee Machine",
+          "Tablet",
+          "Smartphone",
+          "Laptop",
+          "Coffee"
+        ]
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Product Name should be one of the known product categories"
+    },
+    {
+      "rule_id": "RULE_FINA_008",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Quantity",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Quantity is required for transaction records"
+    },
+    {
+      "rule_id": "RULE_FINA_009",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "Quantity",
+      "kwargs": {
+        "min_value": 0
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Quantity must be a non-negative value"
+    },
+    {
+      "rule_id": "RULE_FINA_010",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Price",
+      "kwargs": {},
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Price is important for transaction records and should not be null"
+    },
+    {
+      "rule_id": "RULE_FINA_011",
+      "expectation_type": "expect_column_min_to_be_between",
+      "column": "Price",
+      "kwargs": {
+        "min_value": 0
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Minimum Price should be non-negative"
+    },
+    {
+      "rule_id": "RULE_FINA_012",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Payment_Method",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Payment Method is required for transaction records"
+    },
+    {
+      "rule_id": "RULE_FINA_013",
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "column": "Payment_Method",
+      "kwargs": {
+        "value_set": [
+          "Credit Card",
+          "PayPal",
+          "Cash"
+        ]
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Payment Method should be one of the known payment methods"
+    },
+    {
+      "rule_id": "RULE_FINA_014",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Transaction_Status",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Transaction Status is required for transaction records"
+    },
+    {
+      "rule_id": "RULE_FINA_015",
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "column": "Transaction_Status",
+      "kwargs": {
+        "value_set": [
+          "Completed",
+          "Failed",
+          "Pending"
+        ]
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Transaction Status should be one of the known statuses"
+    }
+  ],
+  "anomaly_rules": [
+    {
+      "rule_id": "RULE_FINA_016",
+      "name": "Quantity Z-Score Anomaly Detection",
+      "columns": [
+        "Quantity"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect unusual Quantity values using Z-Score method"
+    },
+    {
+      "rule_id": "RULE_FINA_017",
+      "name": "Price Z-Score Anomaly Detection",
+      "columns": [
+        "Price"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Detect unusual Price values using Z-Score method"
+    },
+    {
+      "rule_id": "RULE_FINA_018",
+      "name": "Quantity IQR Anomaly Detection",
+      "columns": [
+        "Quantity"
+      ],
+      "method": "iqr",
+      "threshold": 1.5,
+      "severity": "warning",
+      "reason": "Detect unusual Quantity values using IQR method"
+    },
+    {
+      "rule_id": "RULE_FINA_019",
+      "name": "Price IQR Anomaly Detection",
+      "columns": [
+        "Price"
+      ],
+      "method": "iqr",
+      "threshold": 1.5,
+      "severity": "warning",
+      "reason": "Detect unusual Price values using IQR method"
+    },
+    {
+      "rule_id": "RULE_FINA_020",
+      "name": "Product_Name Frequency Anomaly Detection",
+      "columns": [
+        "Product_Name"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect unusual frequency of Product_Name values"
+    },
+    {
+      "rule_id": "RULE_FINA_021",
+      "name": "Payment_Method Frequency Anomaly Detection",
+      "columns": [
+        "Payment_Method"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect unusual frequency of Payment_Method values"
+    },
+    {
+      "rule_id": "RULE_FINA_022",
+      "name": "Transaction_Status Frequency Anomaly Detection",
+      "columns": [
+        "Transaction_Status"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect unusual frequency of Transaction_Status values"
+    }
+  ],
+  "text_quality_columns": []
+}
