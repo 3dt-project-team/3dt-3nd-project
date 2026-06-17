@@ -77,3 +77,82 @@ function uploadFileToServer(file) {
         console.error("Pipeline Error:", error);
     });
 }
+
+// =================================================================
+// [기능 1] 격리 데이터 승인(Approve) 또는 폐기(Delete) 처리 함수
+// =================================================================
+/**
+ * @param {string} actionType - 'approve' (마스터 병합) 또는 'delete' (폐기)
+ * @param {string} domain - 현재 선택된 도메인 (예: 'wikipedia', 'traffic')
+ */
+async function processQuarantineAction(actionType, domain) {
+    // 1. 테이블에서 체크박스가 선택된 행들의 row_hash 값들을 긁어모읍니다.
+    // (HTML 테이블의 체크박스 클래스명을 'quarantine-checkbox'로 맞추시면 됩니다)
+    const checkedBoxes = document.querySelectorAll('.quarantine-checkbox:checked');
+    const rowIds = Array.from(checkedBoxes).map(cb => cb.value);
+
+    // 2. 선택된 데이터가 없을 때의 예외 처리
+    if (rowIds.length === 0) {
+        const confirmAll = confirm("선택된 행이 없습니다. 해당 도메인의 '전체 격리 데이터'를 대상으로 조치하시겠습니까?");
+        if (!confirmAll) return; // 취소 시 함수 종료
+    }
+
+    // 3. 🎯 현업 감사 추적을 위한 조치 사유 수집 (prompt 창 이용)
+    const actionName = actionType === 'approve' ? '강제 승인 및 마스터 병합' : '데이터 폐기';
+    const reason = prompt(`[${actionName}] 작업을 진행하는 사유를 입력해주세요 (필수):`);
+    
+    if (reason === null) return; // 유저가 취소 버튼을 누른 경우
+    if (!reason.trim()) {
+        alert("조치 사유를 입력해야만 처리가 가능합니다.");
+        return;
+    }
+
+    // 4. 백엔드 API 호출 시작
+    try {
+        // rowIds가 비어있으면 null을 보내 백엔드에서 '전체 대상'으로 인식하게 합니다.
+        const requestBody = {
+            row_ids: rowIds.length > 0 ? rowIds : null,
+            reason: reason
+        };
+
+        const response = await fetch(`/api/quarantine/${domain}/${actionType}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.status === 'success') {
+            alert(result.message);
+            
+            // 5. 조치 완료 후 화면 새로고침 함수들 호출
+            if (typeof updateDashboardStats === 'function') updateDashboardStats(); // 대시보드 카운트 갱신
+            if (typeof loadQuarantineTable === 'function') loadQuarantineTable(domain); // 격리 테이블 리로드
+        } else {
+            alert(`처리 실패: ${result.detail || '알 수 없는 오류가 발생했습니다.'}`);
+        }
+    } catch (error) {
+        console.error("API 통신 에러:", error);
+        alert("서버와 통신하는 중 오류가 발생했습니다.");
+    }
+}
+
+
+// =================================================================
+// [기능 2] 최종 마스터 정형 리포트 다운로드 함수
+// =================================================================
+/**
+ * @param {string} domain - 다운로드할 도메인명 (예: 'wikipedia')
+ */
+function downloadMasterReport(domain) {
+    if (!domain) {
+        alert("선택된 도메인이 없습니다.");
+        return;
+    }
+    
+    // 아주르 스토리지에서 CSV 스트림을 받아 브라우저 다운로드 창을 켜는 가장 간단하고 확실한 방법
+    window.location.href = `/api/download/${domain}`;
+}

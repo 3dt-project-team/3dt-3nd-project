@@ -31,10 +31,13 @@
                 <h1 class="text-2xl font-bold text-slate-900 tracking-tight">데이터 파이프라인 관제 센터</h1>
                 <p class="text-sm text-slate-500 mt-1">실시간 데이터 수집 현황 및 품질 이상 징후를 추적합니다.</p>
             </div>
-            <div>
-                <select class="bg-white border border-slate-300 rounded-lg px-4 py-2 font-semibold text-sm shadow-xs focus:outline-indigo-500">
-                    <option value="WIKIPEDIA">🌐 WIKIPEDIA (위키피디아 SSE)</option>
+            <div class="flex items-center space-x-3">
+                <select id="domain-select" class="bg-white border border-slate-300 rounded-lg px-4 py-2 font-semibold text-sm shadow-xs focus:outline-indigo-500">
+                    <option value="wikipedia">🌐 WIKIPEDIA (위키피디아 SSE)</option>
                 </select>
+                <button onclick="downloadMasterReport()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2.5 rounded-lg shadow-sm transition-all cursor-pointer flex items-center space-x-1">
+                    <span>📥 마스터 CSV 다운로드</span>
+                </button>
             </div>
         </div>
 
@@ -77,14 +80,27 @@
         </div>
 
         <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-xs mt-8">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-sm font-bold text-rose-600">⚠️ 실시간 데이터 품질 위반 내역 (AI Quarantine Log)</h3>
-                <span class="bg-rose-50 text-rose-700 text-xs px-2 py-1 rounded font-bold border border-rose-200">실시간 동기화 중</span>
+            <div class="flex justify-between items-center mb-5">
+                <div class="flex items-center space-x-3">
+                    <h3 class="text-sm font-bold text-rose-600">⚠️ 실시간 데이터 품질 위반 내역 (AI Quarantine Log)</h3>
+                    <span class="bg-rose-50 text-rose-700 text-xs px-2 py-1 rounded font-bold border border-rose-200">실시간 동기화 중</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button onclick="processQuarantineAction('approve')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-2 rounded-lg shadow-xs transition-colors cursor-pointer">
+                        ✓ 선택 승인 (Master 병합)
+                    </button>
+                    <button onclick="processQuarantineAction('delete')" class="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-3 py-2 rounded-lg shadow-xs transition-colors cursor-pointer">
+                        🗑️ 선택 폐기
+                    </button>
+                </div>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse text-xs">
                     <thead>
                         <tr class="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold border-b border-slate-200">
+                            <th class="p-3 w-12 text-center">
+                                <input type="checkbox" id="th-check-all" onclick="toggleAllQuarantineCheckboxes(this)" class="cursor-pointer">
+                            </th>
                             <th class="p-3">발생 시각</th>
                             <th class="p-3">데이터 출처</th>
                             <th class="p-3">위반한 AI 규칙 ID</th>
@@ -93,13 +109,19 @@
                     </thead>
                     <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
                         <tr class="hover:bg-rose-50/20 transition-colors">
-                            <td class="p-3 text-slate-400">2026-06-08 15:35:12</td>
+                            <td class="p-3 text-center">
+                                <input type="checkbox" class="quarantine-checkbox cursor-pointer" value="hash_idx_001_wiki">
+                            </td>
+                            <td class="p-3 text-slate-400">2026-06-17 15:35:12</td>
                             <td class="p-3"><span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-bold">WIKIPEDIA</span></td>
                             <td class="p-3 text-indigo-600 font-bold">RULE_04_SPAM</td>
                             <td class="p-3 text-rose-600">본문 데이터 내 홍보성 악성 자바스크립트 주입 공격 패턴 감지 (격리 조치)</td>
                         </tr>
                         <tr class="hover:bg-rose-50/20 transition-colors">
-                            <td class="p-3 text-slate-400">2026-06-08 14:12:00</td>
+                            <td class="p-3 text-center">
+                                <input type="checkbox" class="quarantine-checkbox cursor-pointer" value="hash_idx_002_wiki">
+                            </td>
+                            <td class="p-3 text-slate-400">2026-06-17 14:12:00</td>
                             <td class="p-3"><span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-bold">WIKIPEDIA</span></td>
                             <td class="p-3 text-indigo-600 font-bold">RULE_01_NULL</td>
                             <td class="p-3 text-rose-600">필수 필드 'user_id'에 빈 값(Null) 유입 확인 (Drop 후 격리실 이동)</td>
@@ -119,8 +141,77 @@
             window.location.href = 'index.html';
         }
 
+        // 🔄 [추가 헬퍼] 테이블 체크박스 전체 선택/해제 동기화 토글러
+        function toggleAllQuarantineCheckboxes(masterCanvas) {
+            const targets = document.querySelectorAll('.quarantine-checkbox');
+            targets.forEach(box => box.checked = masterCanvas.checked);
+        }
+
+        // =================================================================
+        // [추가 기능 1] 격리 데이터 사유 팝업 기반 승인/폐기 액션 연동 프로세서
+        // =================================================================
+        async function processQuarantineAction(actionType) {
+            const domain = document.getElementById('domain-select').value;
+            const checkedBoxes = document.querySelectorAll('.quarantine-checkbox:checked');
+            const rowIds = Array.from(checkedBoxes).map(cb => cb.value);
+
+            // 데이터 미선택 시 전체 파티션 조치 여부 컨펌 진행
+            if (rowIds.length === 0) {
+                const confirmAll = confirm(`선택된 행이 없습니다. [${domain.toUpperCase()}] 도메인의 '전체 격리 데이터'를 일괄 처리하시겠습니까?`);
+                if (!confirmAll) return;
+            }
+
+            const actionName = actionType === 'approve' ? '강제 승인 및 마스터 병합' : '데이터 폐기';
+            const reason = prompt(`[${actionName}] 작업을 진행하는 이유를 입력해 주세요 (필수 감사 로그):`);
+            
+            if (reason === null) return; 
+            if (!reason.trim()) {
+                alert("조치 사유를 반드시 작성하셔야 시스템 처리가 완료됩니다.");
+                return;
+            }
+
+            try {
+                const requestBody = {
+                    row_ids: rowIds.length > 0 ? rowIds : null,
+                    reason: reason
+                };
+
+                const response = await fetch(`/api/quarantine/${domain}/${actionType}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody)
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.status === 'success') {
+                    alert(result.message);
+                    // 완수 후 상태 반영을 위한 화면 새로고침
+                    location.reload();
+                } else {
+                    alert(`처리 실패: ${result.detail || 'API 내부 연동 오류가 발생했습니다.'}`);
+                }
+            } catch (error) {
+                console.error("관제 통신 에러:", error);
+                alert("애저 컨테이너 서비스 통신 중 에러가 발생했습니다.");
+            }
+        }
+
+        // =================================================================
+        // [추가 기능 2] 최종 애저 마스터 블롭 컨테이너 파일 스트리밍 다운로더
+        // =================================================================
+        function downloadMasterReport() {
+            const domain = document.getElementById('domain-select').value;
+            if (!domain) {
+                alert("활성화된 데이터 소스 도메인이 식별되지 않습니다.");
+                return;
+            }
+            // 애저 오프라인 가공 정형 보고서 다이렉트 스트리밍 바인딩
+            window.location.href = `/api/download/${domain}`;
+        }
+
+        // 📊 기존 대시보드 스탯 로더 및 차트 드로잉 엔진
         async function fetchDashboardData() {
-            // 💡 [기능 1 구현] 로그인할 때 저장한 진짜 회사 이름 화면에 뿌리기
             const companyName = localStorage.getItem('company_name') || '공인 어드민';
             document.getElementById('user-display').innerText = `${companyName} 관리자 계정`;
 
