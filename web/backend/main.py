@@ -1,18 +1,21 @@
+import io
 import json
 import os
 import shutil
-from typing import Optional
+from datetime import datetime
+from typing import List, Optional
 
+import pandas as pd
 import psycopg2
-
 # Azure Key Vault 부품
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
+from azure.storage.blob import BlobServiceClient
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
-from psycopg2.extras import RealDictCursor
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
+from psycopg2.extras import RealDictCursor, RealDictCursor as RealDictCursor2
 
 app = FastAPI(title="DataCops 품질 관제 플랫폼 API")
 
@@ -26,7 +29,7 @@ app.add_middleware(
 )
 
 
-# 🔐 [개조] Azure Key Vault에서 DB와 Kafka 정보를 모두 가져와 시스템에 주입하는 함수
+# 🔐 [개조] Azure Key Vault에서 DB, Kafka, Storage 정보를 모두 가져와 시스템에 주입하는 함수
 def initialize_platform_secrets():
     try:
         VAULT_URL = "https://kv-sense-team4.vault.azure.net/"
@@ -39,17 +42,21 @@ def initialize_platform_secrets():
         db_user = client.get_secret("db-user").value
         db_password = client.get_secret("db-password").value
 
-        # 2. 🌟 [핵심] Kafka 정보도 금고에서 열기 (키볼트 내 실제 이름과 매칭하세요!)
+        # 2. Kafka 정보도 금고에서 열기
         kafka_servers = client.get_secret("kafka-bootstrap-servers").value
         kafka_user = client.get_secret("kafka-username").value
         kafka_pass = client.get_secret("kafka-password").value
 
-        # 3. 🔥 [치트키] 팀원의 코드가 읽을 수 있도록 시스템 환경변수에 실시간 주입!
+        # 3. 🎯 [추가] 애저 스토리지 연결 문자열도 금고에서 안전하게 확보
+        storage_conn = client.get_secret("storage-connection-string").value
+
+        # 시스템 환경변수에 실시간 주입
         os.environ["KAFKA_BOOTSTRAP_SERVERS"] = kafka_servers
         os.environ["KAFKA_USERNAME"] = kafka_user
         os.environ["KAFKA_PASSWORD"] = kafka_pass
+        os.environ["AZURE_STORAGE_CONNECTION_STRING"] = storage_conn
 
-        print("✅ Key Vault에서 모든 DB 및 Kafka 접속 정보 주입 완료!")
+        print("✅ Key Vault에서 모든 DB, Kafka, Storage 접속 정보 주입 완료!")
 
         return {
             "host": db_host,
@@ -65,8 +72,13 @@ def initialize_platform_secrets():
         ) from e
 
 
-# 🚀 팀원 코드가 실행되기 전에 "먼저" 금고를 열고 환경변수를 채웁니다!
+# 🚀 서버 기동 전 안전하게 비밀 키 정보 로드 및 도커 환경 설정 정합성 부여
 DB_CONFIG = initialize_platform_secrets()
+
+# 글로벌 블롭 스토리지 클라이언트 초기화
+blob_service_client = BlobServiceClient.from_connection_string(
+    os.environ["AZURE_STORAGE_CONNECTION_STRING"]
+)
 
 
 def ensure_rule_versions_table():
@@ -193,6 +205,57 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 # 📂 프론트엔드 경로 설정
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
+
+
+# ── 🛠️ 격리 및 마스터 데이터 관리를 위한 추가 Pydantic 모델 & 헬퍼 함수 ──
+
+class QuarantineActionRequest(BaseModel):
+    row_ids: Optional[List[str]] = None      # None이면 전체 데이터 대상, 명시되면 해당 row_hash 타겟팅
+    reason: Optional[str] = "사유 기입 누락"   # 🎯 현업 표준 요구사항: 감사 추적용 조치 사유 수집
+
+
+def _log_quarantine_action(domain: str, row_ids: list, action: str, reason: str):
+    """팀원 예시 테이블(quarantine_actions) 구조에 사유(reason)까지 매핑하여 DB 로그 기록"""
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        cur = conn.cursor()
+        cur.execute(
+            """
+            INSERT INTO quarantine_actions (domain, row_ids, action, reason, reviewed_at)
+            VALUES (%s, %s, %s, %s, now())
+        """,
+            (domain, json.dumps(row_ids) if row_ids else None, action, reason),
+        )
+        conn.commit()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"[WARN] 데이터 관제 액션 이력 PostgreSQL 적재 실패: {e}")
+
+
+def _get_blob_df(container: str, prefix: str) -> pd.DataFrame:
+    """Databricks가 생성한 멀티파트 분할 Parquet 파일 구조를 통합 스캔하여 Pandas DataFrame으로 병합"""
+    container_client = blob_service_client.get_container_client(container)
+    blob_list = container_client.list_blobs(name_starts_with=prefix)
+
+    dfs = []
+    for blob in blob_list:
+        if blob.name.endswith(".parquet"):
+            blob_client = container_client.get_blob_client(blob.name)
+            data = blob_client.download_blob().readall()
+            dfs.append(pd.read_parquet(io.BytesIO(data)))
+
+    return pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
+
+
+def _write_blob_df(container: str, blob_path: str, df: pd.DataFrame):
+    """정제된 Pandas DataFrame 구조를 고성능 정형 데이터 규격인 Parquet으로 클라우드 스토리지에 업로드"""
+    out_buffer = io.BytesIO()
+    df.to_parquet(out_buffer, index=False, engine="pyarrow")
+    out_buffer.seek(0)
+
+    blob_client = blob_service_client.get_blob_client(container=container, blob=blob_path)
+    blob_client.upload_blob(out_buffer.read(), overwrite=True)
 
 
 # ── 📊 데이터 로직 API 영역 ──────────────────────────────────
@@ -465,6 +528,122 @@ def toggle_rule(body: ToggleRequest):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"규칙 토글 실패: {str(e)}")
+
+
+# ── 🛡️ 격리(Quarantine) 위반 데이터 사유 수정 및 제어 API 영역 ────────
+
+
+@app.post("/api/quarantine/{domain}/delete")
+def api_delete_quarantine(domain: str, req: QuarantineActionRequest):
+    """관제 화면에서 선택한 위반 데이터 블록을 에러 사유와 함께 폐기 처리"""
+    try:
+        container_client = blob_service_client.get_container_client("quarantine")
+
+        if req.row_ids:
+            df = _get_blob_df("quarantine", f"{domain}/")
+            if not df.empty and "_row_hash" in df.columns:
+                df_remain = df[~df["_row_hash"].isin(req.row_ids)]
+                _write_blob_df("quarantine", f"{domain}/quarantine_data.parquet", df_remain)
+            target_str = f"{len(req.row_ids)}건 행"
+        else:
+            blob_list = container_client.list_blobs(name_starts_with=f"{domain}/")
+            for blob in blob_list:
+                container_client.delete_blob(blob.name)
+            target_str = "전체 데이터"
+
+        _log_quarantine_action(domain, req.row_ids, "delete", req.reason)
+
+        return {
+            "status": "success",
+            "message": f"[{domain}] {target_str} 폐기 완료 (조치사유: {req.reason})",
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"격리 데이터 폐기 실패: {str(e)}")
+
+
+@app.post("/api/quarantine/{domain}/approve")
+def api_approve_to_master(domain: str, req: QuarantineActionRequest):
+    """AI 위반 및 품질 미달로 격리된 데이터 중, 허용 가능한 요소를 마스터 레이어로 강제 업데이트 병합 승인"""
+    META_COLS = [
+        "_quarantine_reason", "_ingest_ts", "_source_type", "_platform",
+        "_company", "_domain", "_row_hash", "_quarantine_ts",
+        "_processed_at", "_run_id", "_epoch_id"
+    ]
+
+    try:
+        df_q = _get_blob_df("quarantine", f"{domain}/")
+        if df_q.empty:
+            raise HTTPException(status_code=404, detail="처리할 대상 격리 데이터 파티션이 비어있습니다.")
+
+        df_approved = df_q[df_q["_row_hash"].isin(req.row_ids)] if req.row_ids else df_q
+
+        # 메타데이터 아키텍처 칼럼 삭제 및 비즈니스 데이터 정형화
+        drop_cols = [c for c in META_COLS if c in df_approved.columns]
+        df_approved = df_approved.drop(columns=drop_cols)
+
+        # 기존 실버 파일 연동 확인
+        try:
+            df_silver = _get_blob_df("silver", f"{domain}/")
+            if not df_silver.empty:
+                drop_s = [c for c in META_COLS if c in df_silver.columns]
+                df_silver = df_silver.drop(columns=drop_s)
+        except Exception:
+            df_silver = pd.DataFrame()
+
+        # 정형 마스터 데이터 결합 체계 구축 (Silver + Approved Quarantine)
+        df_master = pd.concat([df_silver, df_approved], ignore_index=True) if not df_silver.empty else df_approved
+        df_master["_merged_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        # 데이터 유실 및 덮어쓰기 영구 방지를 위한 타임스탬프 기반 고유 파일명 명시
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        blob_filename = f"{domain}/master_report_{timestamp}.parquet"
+        _write_blob_df("master", blob_filename, df_master)
+
+        # 중앙 관제 이력 감사 로그 적재
+        _log_quarantine_action(domain, req.row_ids, "approve", req.reason)
+
+        # 마스터 통합 완료 후 기존 격리 저장소 동기화 최적화
+        if req.row_ids:
+            df_remain = df_q[~df_q["_row_hash"].isin(req.row_ids)]
+            _write_blob_df("quarantine", f"{domain}/quarantine_data.parquet", df_remain)
+        else:
+            container_client = blob_service_client.get_container_client("quarantine")
+            blob_list = container_client.list_blobs(name_starts_with=f"{domain}/")
+            for blob in blob_list:
+                container_client.delete_blob(blob.name)
+
+        return {"status": "success", "message": f"[{domain}] 격리 데이터 마스터 컨테이너 정상 갱신 및 결합 승인 완료"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"마스터 강제 병합 및 업데이트 실패: {str(e)}")
+
+
+# ── 💾 마스터(Master) 컨테이너 정형화 리포트 다운로드 API 영역 ───────
+
+
+@app.get("/api/download/{domain}")
+def download_master_csv(domain: str):
+    """정제 완료된 마스터(master) 컨테이너의 파일들을 실시간 병합하여 기업용 종합 정형 리포트(.csv)로 전송"""
+    try:
+        df_master = _get_blob_df("master", f"{domain}/")
+
+        if df_master.empty:
+            raise HTTPException(
+                status_code=404,
+                detail=f"[{domain}] 마스터 컨테이너 영역에 구성된 최종 정형 보고서가 존재하지 않습니다."
+            )
+
+        # 엑셀 깨짐 인코딩 방지를 위한 utf-8-sig 인코딩 처리 후 메모리 버퍼 구성
+        csv_buffer = io.StringIO()
+        df_master.to_csv(csv_buffer, index=False, encoding="utf-8-sig")
+        csv_buffer.seek(0)
+
+        return StreamingResponse(
+            io.BytesIO(csv_buffer.getvalue().encode("utf-8-sig")),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={domain}_final_master_report.csv"}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"다운로드 파일 연산 실패: {str(e)}")
 
 
 # ── 🚀 파일 업로드 및 카프카 적재 API 영역 ─────────────────────
