@@ -59,8 +59,8 @@
             </div>
 
             <div id="drop-zone" class="border-2 border-dashed border-slate-800 hover:border-indigo-500/50 rounded-xl p-8 text-center bg-slate-950/40 cursor-pointer transition-all group">
-                <p class="text-sm text-slate-400 font-medium">정형 파일(CSV, Excel)을 마우스로 끌어오세요</p>
-                <p class="text-xs text-slate-500 mt-1">또는 아래 플러스(+) 버튼 클릭</p>
+                <p id="drop-zone-text" class="text-sm text-slate-400 font-medium">정형 파일(CSV, Excel)을 마우스로 끌어오세요</p>
+                <p id="drop-zone-subtext" class="text-xs text-slate-500 mt-1">또는 아래 플러스(+) 버튼 클릭</p>
                 
                 <label for="file-input" class="inline-block w-11 h-11 leading-10 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white text-2xl font-bold cursor-pointer transition-colors shadow-md shadow-indigo-600/20 mt-4 group-hover:scale-105 transform transition-transform">
                     +
@@ -68,9 +68,14 @@
                 <input type="file" id="file-input" accept=".csv, .xlsx, .xls" class="hidden">
             </div>
 
-            <div id="upload-status" class="text-sm font-semibold text-center min-h-[20px]"></div>
-        </div>
+            <div id="upload-button-area" class="hidden pt-2">
+                <button id="start-upload-btn" class="w-full bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-indigo-600/20 transition-all transform hover:scale-[1.01] cursor-pointer">
+                    🚀 카프카 파이프라인 적재 시작
+                </button>
+            </div>
 
+            <div id="upload-status" class="text-sm font-semibold text-center min-h-[20px]"></div>
+        </div> 
         <div class="pt-4">
             <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 shadow-2xl shadow-indigo-500/5 max-w-4xl mx-auto overflow-hidden">
                 <img id="main-preview" 
@@ -86,5 +91,6 @@
         © 2026 Team DataCops. All rights reserved. Dataops & AI Infrastructure Project.
     </footer>
 
+    <script src="app.js" defer></script>
 </body>
 </html>
