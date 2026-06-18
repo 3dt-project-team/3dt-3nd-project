@@ -1,0 +1,254 @@
+{
+  "suite_name": "fin_transactions_quality_suite",
+  "domain": "fin_transactions",
+  "version": "1.0",
+  "generated_at": "2026-06-17T08:35:12.652844Z",
+  "model": "gpt-4-1-mini-gx-rulegen",
+  "dataset": "testdatabox/finance-fraud-and-loans-dataset-testdatabox",
+  "table": "transactions.csv",
+  "null_strategies": {
+    "TransactionID": {
+      "strategy": "drop",
+      "default_value": null,
+      "reason": "Identifier column, always drop nulls"
+    },
+    "AccountOriginID": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column with low null rate"
+    },
+    "AccountDestinationID": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column with low null rate"
+    },
+    "TransactionTypeID": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column with low null rate"
+    },
+    "Amount": {
+      "strategy": "fill_median",
+      "default_value": null,
+      "reason": "Skewed numeric column (high std vs mean)"
+    },
+    "TransactionDate": {
+      "strategy": "fill_forward",
+      "default_value": null,
+      "reason": "Timestamp column, fill forward preferred over drop"
+    },
+    "BranchID": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column with low null rate"
+    },
+    "Description": {
+      "strategy": "fill_default",
+      "default_value": "",
+      "reason": "Free-text column, fill nulls with empty string"
+    }
+  },
+  "expectations": [
+    {
+      "rule_id": "RULE_FIN__001",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "TransactionID",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "TransactionID must not be null as it uniquely identifies each transaction."
+    },
+    {
+      "rule_id": "RULE_FIN__002",
+      "expectation_type": "expect_column_values_to_be_unique",
+      "column": "TransactionID",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "TransactionID values must be unique to avoid duplicate transaction records."
+    },
+    {
+      "rule_id": "RULE_FIN__003",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "AccountOriginID",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "AccountOriginID must not be null to identify the source account."
+    },
+    {
+      "rule_id": "RULE_FIN__004",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "AccountDestinationID",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "AccountDestinationID must not be null to identify the destination account."
+    },
+    {
+      "rule_id": "RULE_FIN__005",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "TransactionTypeID",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "TransactionTypeID must not be null to classify the transaction type."
+    },
+    {
+      "rule_id": "RULE_FIN__006",
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "column": "TransactionTypeID",
+      "kwargs": {
+        "value_set": [
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "TransactionTypeID must be one of the known valid types (1, 2, 3, 4)."
+    },
+    {
+      "rule_id": "RULE_FIN__007",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Amount",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Amount must not be null as it represents the transaction value."
+    },
+    {
+      "rule_id": "RULE_FIN__008",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "Amount",
+      "kwargs": {
+        "min_value": 0
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Amount must be greater than or equal to zero."
+    },
+    {
+      "rule_id": "RULE_FIN__009",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "TransactionDate",
+      "kwargs": {},
+      "severity": "warning",
+      "enabled": true,
+      "reason": "TransactionDate should not be null; however, a small null rate is observed."
+    },
+    {
+      "rule_id": "RULE_FIN__010",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "BranchID",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "BranchID must not be null to identify the branch where the transaction occurred."
+    },
+    {
+      "rule_id": "RULE_FIN__011",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "BranchID",
+      "kwargs": {
+        "min_value": 0
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "BranchID values must be greater than zero."
+    },
+    {
+      "rule_id": "RULE_FIN__012",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Description",
+      "kwargs": {},
+      "severity": "info",
+      "enabled": true,
+      "reason": "Description should not be null to provide transaction details."
+    }
+  ],
+  "anomaly_rules": [
+    {
+      "rule_id": "RULE_FIN__020",
+      "name": "TransactionID_zscore_anomaly",
+      "columns": [
+        "TransactionID"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect anomalies in TransactionID values based on z-score as it is numeric with std > 0."
+    },
+    {
+      "rule_id": "RULE_FIN__021",
+      "name": "AccountOriginID_zscore_anomaly",
+      "columns": [
+        "AccountOriginID"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect anomalies in AccountOriginID values based on z-score as it is numeric with std > 0."
+    },
+    {
+      "rule_id": "RULE_FIN__022",
+      "name": "AccountDestinationID_zscore_anomaly",
+      "columns": [
+        "AccountDestinationID"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect anomalies in AccountDestinationID values based on z-score as it is numeric with std > 0."
+    },
+    {
+      "rule_id": "RULE_FIN__023",
+      "name": "TransactionTypeID_zscore_anomaly",
+      "columns": [
+        "TransactionTypeID"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect anomalies in TransactionTypeID values based on z-score as it is numeric with std > 0."
+    },
+    {
+      "rule_id": "RULE_FIN__024",
+      "name": "Amount_zscore_anomaly",
+      "columns": [
+        "Amount"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect anomalies in Amount values based on z-score as it is numeric with std > 0."
+    },
+    {
+      "rule_id": "RULE_FIN__025",
+      "name": "Amount_iqr_anomaly",
+      "columns": [
+        "Amount"
+      ],
+      "method": "iqr",
+      "threshold": 1.5,
+      "severity": "warning",
+      "reason": "Detect skewed anomalies in Amount values using IQR method due to expected skewness."
+    },
+    {
+      "rule_id": "RULE_FIN__026",
+      "name": "BranchID_zscore_anomaly",
+      "columns": [
+        "BranchID"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect anomalies in BranchID values based on z-score as it is numeric with std > 0."
+    }
+  ],
+  "text_quality_columns": [
+    "Description"
+  ]
+}

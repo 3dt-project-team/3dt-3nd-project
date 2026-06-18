@@ -1,0 +1,306 @@
+{
+  "suite_name": "dirty_finance_quality_suite",
+  "domain": "dirty_finance",
+  "version": "1.0",
+  "generated_at": "2026-06-17T08:37:35.405934Z",
+  "model": "gpt-4-1-mini-gx-rulegen",
+  "dataset": "alfarisbachmid/dirty-financial-transactions-dataset",
+  "table": "dirty_financial_transactions.csv",
+  "null_strategies": {
+    "Transaction_ID": {
+      "strategy": "drop",
+      "default_value": null,
+      "reason": "Identifier column, always drop nulls"
+    },
+    "Transaction_Date": {
+      "strategy": "drop",
+      "default_value": null,
+      "reason": "Timestamp column, prefer drop over fill_mean"
+    },
+    "Customer_ID": {
+      "strategy": "drop",
+      "default_value": null,
+      "reason": "Identifier column, always drop nulls"
+    },
+    "Product_Name": {
+      "strategy": "allow",
+      "default_value": null,
+      "reason": "Categorical with null_rate 0.0, allow nulls"
+    },
+    "Quantity": {
+      "strategy": "fill_median",
+      "default_value": null,
+      "reason": "Numeric skewed (std > mean), use fill_median"
+    },
+    "Price": {
+      "strategy": "allow",
+      "default_value": null,
+      "reason": "Null rate > 0.8 rule does not apply but null_rate is 0.401, numeric skewed but high null rate, allow nulls"
+    },
+    "Payment_Method": {
+      "strategy": "allow",
+      "default_value": null,
+      "reason": "Categorical with null_rate 0.0, allow nulls"
+    },
+    "Transaction_Status": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical with null_rate > 0.1, fill_mode"
+    }
+  },
+  "expectations": [
+    {
+      "rule_id": "RULE_DIRT_001",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Transaction_ID",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Transaction_ID must not be null as it uniquely identifies each transaction."
+    },
+    {
+      "rule_id": "RULE_DIRT_002",
+      "expectation_type": "expect_column_values_to_be_unique",
+      "column": "Transaction_ID",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Transaction_ID values must be unique to avoid duplicate transaction records."
+    },
+    {
+      "rule_id": "RULE_DIRT_003",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Transaction_Date",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Transaction_Date must not be null to ensure transaction timing is recorded."
+    },
+    {
+      "rule_id": "RULE_DIRT_004",
+      "expectation_type": "expect_column_values_to_match_regex",
+      "column": "Transaction_Date",
+      "kwargs": {
+        "regex": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$"
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Transaction_Date must match ISO date format YYYY-MM-DD to ensure valid dates."
+    },
+    {
+      "rule_id": "RULE_DIRT_005",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Customer_ID",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Customer_ID must not be null to identify the customer for each transaction."
+    },
+    {
+      "rule_id": "RULE_DIRT_006",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Product_Name",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Product_Name must not be null to identify the product sold."
+    },
+    {
+      "rule_id": "RULE_DIRT_007",
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "column": "Product_Name",
+      "kwargs": {
+        "value_set": [
+          "Headphones",
+          "Coffee",
+          "Tablet",
+          "Coffee Machine",
+          "Smartphone",
+          "Laptop"
+        ]
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Product_Name must be one of the standardized product names to ensure consistency."
+    },
+    {
+      "rule_id": "RULE_DIRT_008",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Quantity",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Quantity must not be null to record the number of items sold."
+    },
+    {
+      "rule_id": "RULE_DIRT_009",
+      "expectation_type": "expect_column_min_to_be_between",
+      "column": "Quantity",
+      "kwargs": {
+        "min_value": 0
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Quantity minimum must be greater than 0 to avoid negative or zero quantities."
+    },
+    {
+      "rule_id": "RULE_DIRT_010",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Price",
+      "kwargs": {},
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Price should not be null to record transaction amount, but some nulls are allowed."
+    },
+    {
+      "rule_id": "RULE_DIRT_011",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "Price",
+      "kwargs": {
+        "min_value": 0
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Price must be non-negative to represent valid transaction prices."
+    },
+    {
+      "rule_id": "RULE_DIRT_012",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Payment_Method",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Payment_Method must not be null to identify how the payment was made."
+    },
+    {
+      "rule_id": "RULE_DIRT_013",
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "column": "Payment_Method",
+      "kwargs": {
+        "value_set": [
+          "Credit Card",
+          "PayPal",
+          "Cash"
+        ]
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Payment_Method must be one of the standardized payment methods."
+    },
+    {
+      "rule_id": "RULE_DIRT_014",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Transaction_Status",
+      "kwargs": {},
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Transaction_Status should not be null to track transaction progress."
+    },
+    {
+      "rule_id": "RULE_DIRT_015",
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "column": "Transaction_Status",
+      "kwargs": {
+        "value_set": [
+          "Completed",
+          "Pending",
+          "Failed"
+        ]
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Transaction_Status must be one of the standardized statuses."
+    }
+  ],
+  "anomaly_rules": [
+    {
+      "rule_id": "RULE_DIRT_020",
+      "name": "Quantity zscore anomaly detection",
+      "columns": [
+        "Quantity"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Quantity is numeric with std > 0, apply zscore to detect outliers."
+    },
+    {
+      "rule_id": "RULE_DIRT_021",
+      "name": "Quantity iqr anomaly detection",
+      "columns": [
+        "Quantity"
+      ],
+      "method": "iqr",
+      "threshold": 1.5,
+      "severity": "warning",
+      "reason": "Quantity is skewed numeric, apply IQR method to detect outliers."
+    },
+    {
+      "rule_id": "RULE_DIRT_022",
+      "name": "Price zscore anomaly detection",
+      "columns": [
+        "Price"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Price is numeric with std > 0, apply zscore to detect outliers."
+    },
+    {
+      "rule_id": "RULE_DIRT_023",
+      "name": "Price iqr anomaly detection",
+      "columns": [
+        "Price"
+      ],
+      "method": "iqr",
+      "threshold": 1.5,
+      "severity": "warning",
+      "reason": "Price is skewed numeric, apply IQR method to detect outliers."
+    },
+    {
+      "rule_id": "RULE_DIRT_024",
+      "name": "Transaction_Date frequency anomaly detection",
+      "columns": [
+        "Transaction_Date"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Transaction_Date is categorical, apply frequency anomaly detection."
+    },
+    {
+      "rule_id": "RULE_DIRT_025",
+      "name": "Product_Name frequency anomaly detection",
+      "columns": [
+        "Product_Name"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Product_Name is categorical, apply frequency anomaly detection."
+    },
+    {
+      "rule_id": "RULE_DIRT_026",
+      "name": "Payment_Method frequency anomaly detection",
+      "columns": [
+        "Payment_Method"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Payment_Method is categorical, apply frequency anomaly detection."
+    },
+    {
+      "rule_id": "RULE_DIRT_027",
+      "name": "Transaction_Status frequency anomaly detection",
+      "columns": [
+        "Transaction_Status"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Transaction_Status is categorical, apply frequency anomaly detection."
+    }
+  ],
+  "text_quality_columns": []
+}
