@@ -6,8 +6,10 @@ const statusDiv = document.getElementById('upload-status');
 const uploadBtnArea = document.getElementById('upload-button-area');
 const startUploadBtn = document.getElementById('start-upload-btn');
 
+// 유저가 선택한 파일을 임시 보관할 변수 (대기실)
+let selectedFile = null;
+
 // 🚨 [진입 통제 자물쇠] 로그인 세션(localStorage 등)이 없으면 파일 업로드 차단
-// (테스트 편의를 위해 만약 로컬스토리지에 유저 정보가 없으면 가입 창으로 유도)
 function checkAuthentication() {
     const userInfo = localStorage.getItem('user_info');
     if (!userInfo) {
@@ -18,8 +20,55 @@ function checkAuthentication() {
     return true;
 }
 
-// 유저가 선택한 파일을 임시 보관할 변수 (대기실)
-let selectedFile = null;
+// 🎯 [신규 기능] 로그인 유저 맞춤형 UI 및 회사 정보 자동 인입 스크립트
+function initAuthenticatedUI() {
+    const userInfo = localStorage.getItem('user_info');
+    const company = localStorage.getItem('company_name');
+    const domain = localStorage.getItem('domain_name');
+    const navAuthSection = document.getElementById('nav-auth-section');
+
+    // 세션 정보가 존재한다면 (로그인 완료 상태)
+    if (userInfo && company && domain) {
+        
+        // 1. 오른쪽 위 메뉴를 [대시보드 이동] 과 [로그아웃] 버튼으로 완벽하게 교체
+        if (navAuthSection) {
+            navAuthSection.innerHTML = `
+                <a href="dashboard.html" class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold px-4 py-2 rounded-lg transition-all shadow-md shadow-indigo-600/20 cursor-pointer flex items-center gap-1">
+                    📉 관제 대시보드 이동
+                </a>
+                <button onclick="handleLogout()" class="text-sm font-semibold text-slate-400 hover:text-rose-400 transition-colors cursor-pointer">
+                    로그아웃
+                </button>
+            `;
+        }
+
+        // 2. 유입관 카드 내 Company, Domain 입력창에 유저 고유 정보 자동 주입
+        const companyInput = document.getElementById('company');
+        const domainInput = document.getElementById('domain');
+        
+        if (companyInput) {
+            companyInput.value = company;
+            companyInput.disabled = true; // 본인 부서 파이프라인 고정을 위해 읽기 전용 처리(권장)
+            companyInput.classList.add('opacity-60', 'cursor-not-allowed');
+        }
+        if (domainInput) {
+            domainInput.value = domain;
+            domainInput.disabled = true;
+            domainInput.classList.add('opacity-60', 'cursor-not-allowed');
+        }
+    }
+}
+
+// 🎯 [신규 기능] 로그아웃 액션 처리 함수
+window.handleLogout = function() {
+    localStorage.clear(); // 세션 삭제
+    alert("로그아웃 되었습니다. 메인 화면으로 이동합니다.");
+    window.location.href = 'index.html';
+}
+
+// 페이지가 로드되자마자 로그인 UI 매핑 스위치 작동
+document.addEventListener('DOMContentLoaded', initAuthenticatedUI);
+
 
 // 1. 브라우저 자동 파일 열기 방지
 ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -82,7 +131,6 @@ startUploadBtn.addEventListener('click', () => {
 function uploadFileToServer(file) {
     const company = document.getElementById('company').value.trim();
     const domain = document.getElementById('domain').value.trim();
-    // 🎯 조치 완료: 신규 추가된 소스명(Source) 드롭다운 선택값 추출
     const source = document.getElementById('source').value; 
 
     if (!company || !domain || !source) {
@@ -90,14 +138,13 @@ function uploadFileToServer(file) {
         return;
     }
 
-    // 전송 시작 시 버튼 비활성화하여 더블 클릭 방지
     startUploadBtn.disabled = true;
     statusDiv.innerHTML = `<span class="text-indigo-400 animate-pulse">⏳ [${file.name}] 카프카 브론즈 레이어로 적재 중...</span>`;
 
     const formData = new FormData();
     formData.append("company", company);
     formData.append("domain", domain);
-    formData.append("source", source); // 🎯 조치 완료: 백엔드가 [회사명.도메인.소스] 토픽을 만들 수 있도록 탑재
+    formData.append("source", source); 
     formData.append("file", file);
 
     fetch("/api/upload", {
@@ -113,7 +160,6 @@ function uploadFileToServer(file) {
     })
     .then((data) => {
         statusDiv.innerHTML = `<span class="text-emerald-400">✅ 적재 완수! ${data.message}</span>`;
-        // 성공 후 초기화
         uploadBtnArea.classList.add('hidden');
         dropZoneText.innerText = "정형 파일(CSV, Excel)을 마우스로 끌어오세요";
         dropZoneSubtext.innerText = "또는 아래 플러스(+) 버튼 클릭";

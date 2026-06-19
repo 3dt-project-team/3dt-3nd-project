@@ -740,7 +740,10 @@ def register_user(req: RegisterRequest):
 # ── 🌐 프론트엔드 정적 페이지 서빙 영역 ────────────────────────
 
 
+# 🎯 조치 완료: 정적 페이지 라우팅에 /index.html 및 /index 멀티 바인딩 확장 탑재
 @app.get("/")
+@app.get("/index.html")
+@app.get("/index")
 def read_index():
     return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
 
