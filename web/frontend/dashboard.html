@@ -16,6 +16,11 @@
         </div>
         <div class="flex items-center space-x-6">
             <span class="bg-indigo-900/50 text-indigo-300 border border-indigo-700/50 px-3 py-1 rounded-full text-xs font-bold">PROD 환경</span>
+            
+            <a href="index.html" class="text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition-all cursor-pointer font-medium flex items-center gap-1">
+                📥 홈 화면
+            </a>
+            
             <a href="rules.html" class="text-xs text-slate-400 hover:text-indigo-300 transition-colors font-medium">🔧 AI 규칙 관리</a>
             <span id="user-display" class="text-sm text-slate-300 font-medium">로딩 중...</span>
             <button onclick="handleLogout()" class="text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition-all cursor-pointer">
@@ -134,28 +139,27 @@
     </main>
 
     <script>
-        // 🚪 [기능 2 함수] 로그아웃 시 브라우저 창고를 비우고 홈으로 튕겨냄
+        // 🚪 로그아웃 시 브라우저 창고를 비우고 홈으로 튕겨냄
         function handleLogout() {
             localStorage.clear();
             alert("안전하게 로그아웃되었습니다.");
             window.location.href = 'index.html';
         }
 
-        // 🔄 [추가 헬퍼] 테이블 체크박스 전체 선택/해제 동기화 토글러
+        // 🔄 테이블 체크박스 전체 선택/해제 동기화 토글러
         function toggleAllQuarantineCheckboxes(masterCanvas) {
             const targets = document.querySelectorAll('.quarantine-checkbox');
             targets.forEach(box => box.checked = masterCanvas.checked);
         }
 
         // =================================================================
-        // [추가 기능 1] 격리 데이터 사유 팝업 기반 승인/폐기 액션 연동 프로세서
+        // 격리 데이터 사유 팝업 기반 승인/폐기 액션 연동 프로세서
         // =================================================================
         async function processQuarantineAction(actionType) {
             const domain = document.getElementById('domain-select').value;
             const checkedBoxes = document.querySelectorAll('.quarantine-checkbox:checked');
             const rowIds = Array.from(checkedBoxes).map(cb => cb.value);
 
-            // 데이터 미선택 시 전체 파티션 조치 여부 컨펌 진행
             if (rowIds.length === 0) {
                 const confirmAll = confirm(`선택된 행이 없습니다. [${domain.toUpperCase()}] 도메인의 '전체 격리 데이터'를 일괄 처리하시겠습니까?`);
                 if (!confirmAll) return;
@@ -186,7 +190,6 @@
 
                 if (response.ok && result.status === 'success') {
                     alert(result.message);
-                    // 완수 후 상태 반영을 위한 화면 새로고침
                     location.reload();
                 } else {
                     alert(`처리 실패: ${result.detail || 'API 내부 연동 오류가 발생했습니다.'}`);
@@ -198,7 +201,7 @@
         }
 
         // =================================================================
-        // [추가 기능 2] 최종 애저 마스터 블롭 컨테이너 파일 스트리밍 다운로더
+        // 최종 애저 마스터 블롭 컨테이너 파일 스트리밍 다운로더
         // =================================================================
         function downloadMasterReport() {
             const domain = document.getElementById('domain-select').value;
@@ -206,13 +209,20 @@
                 alert("활성화된 데이터 소스 도메인이 식별되지 않습니다.");
                 return;
             }
-            // 애저 오프라인 가공 정형 보고서 다이렉트 스트리밍 바인딩
             window.location.href = `/api/download/${domain}`;
         }
 
         // 📊 기존 대시보드 스탯 로더 및 차트 드로잉 엔진
         async function fetchDashboardData() {
-            const companyName = localStorage.getItem('company_name') || '공인 어드민';
+            // 🚨 [핵심 조치 완료] 진입 통제 자물쇠: 로그인 세션(email)이 전혀 없으면 아예 구동을 전면 정지하고 즉시 튕겨냄
+            const email = localStorage.getItem('email');
+            if (!email) {
+                alert("⚠️ 관제 센터 대시보드는 인증된 사용자만 접근 가능합니다. 로그인을 진행해 주세요.");
+                window.location.href = 'login.html';
+                return; // 폼 렌더링 파괴
+            }
+
+            const companyName = localStorage.getItem('company_name') || '외부 기업';
             document.getElementById('user-display').innerText = `${companyName} 관리자 계정`;
 
             try {

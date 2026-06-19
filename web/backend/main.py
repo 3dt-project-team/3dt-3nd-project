@@ -210,12 +210,11 @@ FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 # ── 🛠️ 격리 및 마스터 데이터 관리를 위한 추가 Pydantic 모델 & 헬퍼 함수 ──
 
 class QuarantineActionRequest(BaseModel):
-    row_ids: Optional[List[str]] = None      # None이면 전체 데이터 대상, 명시되면 해당 row_hash 타겟팅
-    reason: Optional[str] = "사유 기입 누락"   # 감사 추적용 조치 사유 수집
+    row_ids: Optional[List[str]] = None      
+    reason: Optional[str] = "사유 기입 누락"   
 
 
 def _log_quarantine_action(domain: str, row_ids: list, action: str, reason: str):
-    """팀원 예시 테이블(quarantine_actions) 구조에 사유(reason)까지 매핑하여 DB 로그 기록"""
     try:
         conn = psycopg2.connect(**DB_CONFIG)
         cur = conn.cursor()
@@ -234,7 +233,6 @@ def _log_quarantine_action(domain: str, row_ids: list, action: str, reason: str)
 
 
 def _get_blob_df(container: str, prefix: str) -> pd.DataFrame:
-    """Databricks가 생성한 멀티파트 분할 Parquet 파일 구조를 통합 스캔하여 Pandas DataFrame으로 병합"""
     container_client = blob_service_client.get_container_client(container)
     blob_list = container_client.list_blobs(name_starts_with=prefix)
 
@@ -249,7 +247,6 @@ def _get_blob_df(container: str, prefix: str) -> pd.DataFrame:
 
 
 def _write_blob_df(container: str, blob_path: str, df: pd.DataFrame):
-    """정제된 Pandas DataFrame 구조를 고성능 정형 데이터 규격인 Parquet으로 클라우드 스토리지에 업로드"""
     out_buffer = io.BytesIO()
     df.to_parquet(out_buffer, index=False, engine="pyarrow")
     out_buffer.seek(0)
@@ -261,7 +258,6 @@ def _write_blob_df(container: str, blob_path: str, df: pd.DataFrame):
 # ── 📊 데이터 로직 API 영역 ──────────────────────────────────
 
 
-# 📊 대시보드 통계 데이터를 PostgreSQL에서 꺼내오는 API
 @app.get("/api/dashboard")
 def get_dashboard_data():
     try:
@@ -294,11 +290,11 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
+# 💡 조치 완료: 가입 DTO 모델에서 domain_name 항목 제거
 class RegisterRequest(BaseModel):
     email: str
     password: str
     company_name: str
-    domain_name: str
 
 
 @app.post("/api/login")
@@ -496,7 +492,7 @@ def get_rules(email: str = Query(...), domain: str = Query(...)):
 class ToggleRequest(BaseModel):
     email: str
     domain: str
-    rule_type: str  # "expectations" | "anomaly_rules"
+    rule_type: str  
     rule_index: int
     enabled: bool
 
@@ -539,7 +535,6 @@ def toggle_rule(body: ToggleRequest):
 
 @app.post("/api/quarantine/{domain}/delete")
 def api_delete_quarantine(domain: str, req: QuarantineActionRequest):
-    """관제 화면에서 선택한 위반 데이터 블록을 에러 사유와 함께 폐기 처리"""
     try:
         container_client = blob_service_client.get_container_client("quarantine")
 
@@ -567,7 +562,6 @@ def api_delete_quarantine(domain: str, req: QuarantineActionRequest):
 
 @app.post("/api/quarantine/{domain}/approve")
 def api_approve_to_master(domain: str, req: QuarantineActionRequest):
-    """AI 위반 및 품질 미달로 격리된 데이터 중, 허용 가능한 요소를 마스터 레이어로 강제 업데이트 병합 승인"""
     META_COLS = [
         "_quarantine_reason", "_ingest_ts", "_source_type", "_platform",
         "_company", "_domain", "_row_hash", "_quarantine_ts",
@@ -620,7 +614,6 @@ def api_approve_to_master(domain: str, req: QuarantineActionRequest):
 
 @app.get("/api/download/{domain}")
 def download_master_csv(domain: str):
-    """정제 완료된 마스터(master) 컨테이너의 파일들을 실시간 병합하여 종합 정형 리포트(.csv)로 전송"""
     try:
         df_master = _get_blob_df("master", f"{domain}/")
 
@@ -650,7 +643,7 @@ def download_master_csv(domain: str):
 async def upload_batch_file(
     company: str = Form(...), 
     domain: str = Form(...), 
-    source: str = Form(...),  # 🎯 조치 완료: 프론트엔드가 전송한 소스명 바구니 장착!
+    source: str = Form(...),  
     file: UploadFile = File(...)
 ):
     filename = file.filename
@@ -665,7 +658,6 @@ async def upload_batch_file(
         raise HTTPException(status_code=500, detail=f"임시 파일 저장 실패: {str(e)}")
 
     try:
-        # 🎯 조치 완료: 파이프라인 엔진에 source를 탑재하여 회사명.도메인명.소스명 토픽으로 유도
         result = process_batch_file(company=company, domain=domain, source=source, file_path=temp_file_path)
 
         if result.get("status") == "success":
@@ -692,38 +684,21 @@ def register_user(req: RegisterRequest):
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
     try:
-        # 1. 중복 가입 체크
         cur.execute("SELECT 1 FROM web_users WHERE email = %s;", (req.email,))
         if cur.fetchone():
             raise HTTPException(status_code=400, detail="이미 가입된 이메일입니다.")
         
-        # 2. web_users 테이블에 유저 정보 적재
+        # 💡 조치 완료: domain_name을 제외하고 회사 정보 위주로만 계정을 우선 생성
         insert_user_query = """
             INSERT INTO web_users (email, password_hash, company_name, domain_name)
-            VALUES (%s, %s, %s, %s) RETURNING user_id;
+            VALUES (%s, %s, %s, NULL) RETURNING user_id;
         """
-        cur.execute(insert_user_query, (req.email, req.password, req.company_name, req.domain_name))
-        user_id = cur.fetchone()['user_id']
+        cur.execute(insert_user_query, (req.email, req.password, req.company_name))
         
-        # 3. 정제된 bronze_folder 명명 규칙 적용 (소문자화 및 공백 제거)
-        clean_company = req.company_name.strip().lower().replace(" ", "")
-        clean_domain = req.domain_name.strip().lower().replace(" ", "")
-        bronze_folder_name = f"{clean_company}_{clean_domain}"
-        
-        # 4. data_sources 테이블에 배치 소스 정보 자동 연동 적재
-        insert_source_query = """
-            INSERT INTO data_sources (user_id, source_name, bronze_folder, data_source_type, status, created_at)
-            VALUES (%s, %s, %s, %s, 'active', NOW());
-        """
-        source_name = f"{req.company_name} {req.domain_name} Batch Source"
-        cur.execute(insert_source_query, (user_id, source_name, bronze_folder_name, 'batch'))
-        
-        # 5. 최종 DB 반영
         conn.commit()
         return {
             "status": "success", 
-            "message": "회원가입 및 데이터 스토리지 개설 완료",
-            "bronze_folder": bronze_folder_name
+            "message": "회원가입 완료"
         }
         
     except psycopg2.Error as db_err:
@@ -740,7 +715,6 @@ def register_user(req: RegisterRequest):
 # ── 🌐 프론트엔드 정적 페이지 서빙 영역 ────────────────────────
 
 
-# 🎯 조치 완료: 정적 페이지 라우팅에 /index.html 및 /index 멀티 바인딩 확장 탑재
 @app.get("/")
 @app.get("/index.html")
 @app.get("/index")
