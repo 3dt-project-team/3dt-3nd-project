@@ -295,6 +295,12 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+    company_name: str
+    domain_name: str
+
 
 @app.post("/api/login")
 def login_user(login_info: LoginRequest):
@@ -684,6 +690,59 @@ async def upload_batch_file(
         if os.path.exists(temp_file_path):
             os.remove(temp_file_path)
         raise HTTPException(status_code=500, detail=f"배치 파이프라인 연동 중 예외 발생: {str(e)}")
+    
+
+@app.post("/api/register")
+def register_user(req: RegisterRequest):
+    conn = psycopg2.connect(**DB_CONFIG)
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    
+    try:
+        # 1. 중복 가입 체크
+        cur.execute("SELECT 1 FROM web_users WHERE email = %s;", (req.email,))
+        if cur.fetchone():
+            raise HTTPException(status_code=400, detail="이미 가입된 이메일입니다.")
+        
+        # 2. web_users 테이블에 유저 정보 적재 (비밀번호는 기존 프로젝트 규칙에 따라 1234 고정 또는 평문 처리)
+        # 만약 실제 password를 해싱 없이 넣는 구조라면 아래와 같이 매핑합니다.
+        insert_user_query = """
+            INSERT INTO web_users (email, password_hash, company_name, domain_name)
+            VALUES (%s, %s, %s, %s) RETURNING user_id;
+        """
+        cur.execute(insert_user_query, (req.email, req.password, req.company_name, req.domain_name))
+        user_id = cur.fetchone()['user_id']
+        
+        # 3. 🎯 [핵심 요구사항] 정제된 bronze_folder 명명 규칙 적용 (소문자화 및 공백 제거)
+        clean_company = req.company_name.strip().lower().replace(" ", "")
+        clean_domain = req.domain_name.strip().lower().replace(" ", "")
+        bronze_folder_name = f"{clean_company}_{clean_domain}"
+        
+        # 4. data_sources 테이블에 배치 소스 정보 자동 연동 적재
+        insert_source_query = """
+            INSERT INTO data_sources (user_id, source_name, bronze_folder, data_source_type, status, created_at)
+            VALUES (%s, %s, %s, %s, 'active', NOW());
+        """
+        # 소스 이름은 기본적으로 '기본 정형 데이터 소스' 등으로 명시합니다.
+        source_name = f"{req.company_name} {req.domain_name} Batch Source"
+        cur.execute(insert_source_query, (user_id, source_name, bronze_folder_name, 'batch'))
+        
+        # 5. 최종 DB 반영
+        conn.commit()
+        return {
+            "status": "success", 
+            "message": "회원가입 및 데이터 스토리지 개설 완료",
+            "bronze_folder": bronze_folder_name
+        }
+        
+    except psycopg2.Error as db_err:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"DB 적재 실패: {str(db_err)}")
+    except HTTPException as he:
+        conn.rollback()
+        raise he
+    finally:
+        cur.close()
+        conn.close()
 
 
 # ── 🌐 프론트엔드 정적 페이지 서빙 영역 ────────────────────────
@@ -715,3 +774,9 @@ def read_rules():
 @app.get("/app.js")
 def read_js():
     return FileResponse(os.path.join(FRONTEND_DIR, "app.js"))
+
+
+@app.get("/register.html")
+@app.get("/register")
+def read_register():
+    return FileResponse(os.path.join(FRONTEND_DIR, "register.html"))
