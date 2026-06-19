@@ -1,0 +1,235 @@
+{
+  "suite_name": "fin_loans_quality_suite",
+  "domain": "fin_loans",
+  "version": "1.0",
+  "generated_at": "2026-06-17T08:36:37.523190Z",
+  "model": "gpt-4-1-mini-gx-rulegen",
+  "dataset": "testdatabox/finance-fraud-and-loans-dataset-testdatabox",
+  "table": "loans.csv",
+  "null_strategies": {
+    "LoanID": {
+      "strategy": "drop",
+      "default_value": null,
+      "reason": "Identifier column with 'id' in name, always drop"
+    },
+    "AccountID": {
+      "strategy": "drop",
+      "default_value": null,
+      "reason": "Identifier column with 'id' in name, always drop"
+    },
+    "LoanStatusID": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column with null_rate 0.0, fill_mode preferred for categorical"
+    },
+    "PrincipalAmount": {
+      "strategy": "fill_median",
+      "default_value": null,
+      "reason": "Numeric column with high std vs mean indicating skewness, fill_median"
+    },
+    "InterestRate": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Numeric column with relatively low std vs mean, normal distribution assumed, fill_mean"
+    },
+    "StartDate": {
+      "strategy": "fill_forward",
+      "default_value": null,
+      "reason": "Timestamp column with nulls, fill_forward preferred over drop or fill_mean"
+    },
+    "EstimatedEndDate": {
+      "strategy": "fill_forward",
+      "default_value": null,
+      "reason": "Timestamp column with nulls, fill_forward preferred over drop or fill_mean"
+    }
+  },
+  "expectations": [
+    {
+      "rule_id": "RULE_FIN__001",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "LoanID",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "LoanID must not be null as it uniquely identifies each loan."
+    },
+    {
+      "rule_id": "RULE_FIN__002",
+      "expectation_type": "expect_column_values_to_be_unique",
+      "column": "LoanID",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "LoanID values must be unique to avoid duplicate loan records."
+    },
+    {
+      "rule_id": "RULE_FIN__003",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "AccountID",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "AccountID must not be null to link loans to accounts."
+    },
+    {
+      "rule_id": "RULE_FIN__004",
+      "expectation_type": "expect_column_values_to_be_unique",
+      "column": "AccountID",
+      "kwargs": {},
+      "severity": "warning",
+      "enabled": true,
+      "reason": "AccountID has high unique count but duplicates are possible if multiple loans per account."
+    },
+    {
+      "rule_id": "RULE_FIN__005",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "LoanStatusID",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "LoanStatusID must not be null to indicate loan status."
+    },
+    {
+      "rule_id": "RULE_FIN__006",
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "column": "LoanStatusID",
+      "kwargs": {
+        "value_set": [
+          1,
+          2,
+          3
+        ]
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "LoanStatusID must be one of the standardized status codes: 1 (Active), 2 (Closed), 3 (Default)."
+    },
+    {
+      "rule_id": "RULE_FIN__007",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "PrincipalAmount",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "PrincipalAmount must not be null as it represents the loan amount."
+    },
+    {
+      "rule_id": "RULE_FIN__008",
+      "expectation_type": "expect_column_min_to_be_between",
+      "column": "PrincipalAmount",
+      "kwargs": {
+        "min_value": 0
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "PrincipalAmount minimum must be greater than 0 to ensure valid loan amounts."
+    },
+    {
+      "rule_id": "RULE_FIN__009",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "InterestRate",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "InterestRate must not be null as it is essential for loan calculations."
+    },
+    {
+      "rule_id": "RULE_FIN__010",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "InterestRate",
+      "kwargs": {
+        "min_value": 0
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "InterestRate must be non-negative."
+    },
+    {
+      "rule_id": "RULE_FIN__011",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "StartDate",
+      "kwargs": {},
+      "severity": "warning",
+      "enabled": true,
+      "reason": "StartDate should not be null to track loan start."
+    },
+    {
+      "rule_id": "RULE_FIN__012",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "EstimatedEndDate",
+      "kwargs": {},
+      "severity": "warning",
+      "enabled": true,
+      "reason": "EstimatedEndDate should not be null to track loan end."
+    }
+  ],
+  "anomaly_rules": [
+    {
+      "rule_id": "RULE_FIN__013",
+      "name": "LoanID zscore anomaly detection",
+      "columns": [
+        "LoanID"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "LoanID is numeric with std > 0, apply zscore to detect outliers."
+    },
+    {
+      "rule_id": "RULE_FIN__014",
+      "name": "AccountID zscore anomaly detection",
+      "columns": [
+        "AccountID"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "AccountID is numeric with std > 0, apply zscore to detect outliers."
+    },
+    {
+      "rule_id": "RULE_FIN__015",
+      "name": "LoanStatusID frequency anomaly detection",
+      "columns": [
+        "LoanStatusID"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "LoanStatusID is categorical with 3 unique values, apply frequency anomaly detection."
+    },
+    {
+      "rule_id": "RULE_FIN__016",
+      "name": "PrincipalAmount zscore anomaly detection",
+      "columns": [
+        "PrincipalAmount"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "PrincipalAmount is numeric with std > 0, apply zscore to detect outliers."
+    },
+    {
+      "rule_id": "RULE_FIN__017",
+      "name": "PrincipalAmount iqr anomaly detection",
+      "columns": [
+        "PrincipalAmount"
+      ],
+      "method": "iqr",
+      "threshold": 1.5,
+      "severity": "warning",
+      "reason": "PrincipalAmount is skewed numeric, apply IQR to detect outliers."
+    },
+    {
+      "rule_id": "RULE_FIN__018",
+      "name": "InterestRate zscore anomaly detection",
+      "columns": [
+        "InterestRate"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "InterestRate is numeric with std > 0, apply zscore to detect outliers."
+    }
+  ],
+  "text_quality_columns": []
+}
