@@ -6,6 +6,18 @@ const statusDiv = document.getElementById('upload-status');
 const uploadBtnArea = document.getElementById('upload-button-area');
 const startUploadBtn = document.getElementById('start-upload-btn');
 
+// 🚨 [진입 통제 자물쇠] 로그인 세션(localStorage 등)이 없으면 파일 업로드 차단
+// (테스트 편의를 위해 만약 로컬스토리지에 유저 정보가 없으면 가입 창으로 유도)
+function checkAuthentication() {
+    const userInfo = localStorage.getItem('user_info');
+    if (!userInfo) {
+        alert("데이터 파이프라인 유입관을 사용하시려면 먼저 로그인 또는 회원가입을 완료해야 합니다.");
+        window.location.href = 'register.html';
+        return false;
+    }
+    return true;
+}
+
 // 유저가 선택한 파일을 임시 보관할 변수 (대기실)
 let selectedFile = null;
 
@@ -32,6 +44,7 @@ let selectedFile = null;
 
 // 4. ✨ 파일이 대기실에 들어왔을 때 화면에 표시해주는 기능 (1단계 완수)
 function handleFileSelected(file) {
+    if (!checkAuthentication()) return;
     if (!file) return;
     
     selectedFile = file; // 파일 저장
@@ -56,7 +69,7 @@ fileInput.addEventListener('change', (e) => {
     if (files.length > 0) handleFileSelected(files[0]);
 });
 
-// 5. ✨ [신규] 적재 시작 버튼을 클릭했을 때 실제 백엔드로 발사 (2단계 완수)
+// 5. ✨ 적재 시작 버튼을 클릭했을 때 실제 백엔드로 발사 (2단계 완수)
 startUploadBtn.addEventListener('click', () => {
     if (!selectedFile) {
         alert("적재할 파일이 선택되지 않았습니다.");
@@ -69,9 +82,11 @@ startUploadBtn.addEventListener('click', () => {
 function uploadFileToServer(file) {
     const company = document.getElementById('company').value.trim();
     const domain = document.getElementById('domain').value.trim();
+    // 🎯 조치 완료: 신규 추가된 소스명(Source) 드롭다운 선택값 추출
+    const source = document.getElementById('source').value; 
 
-    if (!company || !domain) {
-        alert("Company(회사명)와 Domain(도메인명)을 입력해 주세요!");
+    if (!company || !domain || !source) {
+        alert("Company(회사명), Domain(도메인명), Source(소스명)를 모두 입력 및 선택해 주세요!");
         return;
     }
 
@@ -82,6 +97,7 @@ function uploadFileToServer(file) {
     const formData = new FormData();
     formData.append("company", company);
     formData.append("domain", domain);
+    formData.append("source", source); // 🎯 조치 완료: 백엔드가 [회사명.도메인.소스] 토픽을 만들 수 있도록 탑재
     formData.append("file", file);
 
     fetch("/api/upload", {
@@ -112,7 +128,7 @@ function uploadFileToServer(file) {
     });
 }
 
-// --- 아래 격리 조치 및 다운로드 함수는 기존과 동일하게 유지됩니다 ---
+// --- 격리 조치 및 다운로드 함수는 기존과 동일하게 유지됩니다 ---
 async function processQuarantineAction(actionType, domain) {
     const checkedBoxes = document.querySelectorAll('.quarantine-checkbox:checked');
     const rowIds = Array.from(checkedBoxes).map(cb => cb.value);
