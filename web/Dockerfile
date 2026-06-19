@@ -18,7 +18,8 @@ RUN pip install --no-cache-dir \
     python-dotenv \
     confluent-kafka \
     pyarrow \
-    azure-storage-blob
+    azure-storage-blob \
+    kafka-python
 
 # 2. 백엔드와 프론트엔드 폴더를 통째로 상자 안으로 복사
 COPY frontend/ ./frontend/
