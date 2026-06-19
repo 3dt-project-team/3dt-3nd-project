@@ -6,6 +6,18 @@ const statusDiv = document.getElementById('upload-status');
 const uploadBtnArea = document.getElementById('upload-button-area');
 const startUploadBtn = document.getElementById('start-upload-btn');
 
+// 🚨 [진입 통제 자물쇠] 로그인 세션(localStorage 등)이 없으면 파일 업로드 차단
+// (테스트 편의를 위해 만약 로컬스토리지에 유저 정보가 없으면 가입 창으로 유도)
+function checkAuthentication() {
+    const userInfo = localStorage.getItem('user_info');
+    if (!userInfo) {
+        alert("데이터 파이프라인 유입관을 사용하시려면 먼저 로그인 또는 회원가입을 완료해야 합니다.");
+        window.location.href = 'register.html';
+        return false;
+    }
+    return true;
+}
+
 // 유저가 선택한 파일을 임시 보관할 변수 (대기실)
 let selectedFile = null;
 
@@ -133,6 +145,7 @@ startUploadBtn.addEventListener('click', () => {
 function uploadFileToServer(file) {
     const company = document.getElementById('company').value.trim();
     const domain = document.getElementById('domain').value.trim();
+    // 🎯 조치 완료: 신규 추가된 소스명(Source) 드롭다운 선택값 추출
     const source = document.getElementById('source').value; 
 
     if (!company || !domain || !source) {
@@ -146,7 +159,7 @@ function uploadFileToServer(file) {
     const formData = new FormData();
     formData.append("company", company);
     formData.append("domain", domain);
-    formData.append("source", source); 
+    formData.append("source", source); // 🎯 조치 완료: 백엔드가 [회사명.도메인.소스] 토픽을 만들 수 있도록 탑재
     formData.append("file", file);
 
     fetch("/api/upload", {
