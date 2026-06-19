@@ -53,7 +53,11 @@
                     localStorage.setItem('email', emailInput);
                     localStorage.setItem('domain_name', result.user_info.domain_name);
                     localStorage.setItem('company_name', result.user_info.company_name);
-                    window.location.href = 'dashboard.html';
+                    // 🎯 조치 완수: app.js의 checkAuthentication() 방어벽을 통과시키기 위해 유저 정보 탑재
+                    localStorage.setItem('user_info', JSON.stringify(result.user_info)); 
+                    
+                    // 🎯 조치 완수: 로그인 직후 대시보드가 아닌 '데이터 유입 화면'으로 목적지 변경!
+                    window.location.href = 'index.html'; 
                 } else {
                     errorMsg.innerText = "⚠️ " + (result.detail || "로그인 정보가 일치하지 않습니다.");
                     errorMsg.classList.remove('hidden');
