@@ -15,7 +15,7 @@ from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
-from psycopg2.extras import RealDictCursor, RealDictCursor as RealDictCursor2
+from psycopg2.extras import RealDictCursor
 
 app = FastAPI(title="DataCops 품질 관제 플랫폼 API")
 
@@ -29,7 +29,7 @@ app.add_middleware(
 )
 
 
-# 🔐 [개조] Azure Key Vault에서 DB, Kafka, Storage 정보를 모두 가져와 시스템에 주입하는 함수
+# 🔐 Azure Key Vault에서 DB, Kafka, Storage 정보를 모두 가져와 시스템에 주입하는 함수
 def initialize_platform_secrets():
     try:
         VAULT_URL = "https://kv-sense-team4.vault.azure.net/"
@@ -47,7 +47,7 @@ def initialize_platform_secrets():
         kafka_user = client.get_secret("kafka-username").value
         kafka_pass = client.get_secret("kafka-password").value
 
-        # 3. 🎯 [추가] 애저 스토리지 연결 문자열도 금고에서 안전하게 확보
+        # 3. 애저 스토리지 연결 문자열도 금고에서 안전하게 확보
         storage_conn = client.get_secret("storage-connection-string").value
 
         # 시스템 환경변수에 실시간 주입
@@ -72,7 +72,7 @@ def initialize_platform_secrets():
         ) from e
 
 
-# 🚀 서버 기동 전 안전하게 비밀 키 정보 로드 및 도커 환경 설정 정합성 부여
+# 서버 기동 전 안전하게 비밀 키 정보 로드 및 도커 환경 설정 정합성 부여
 DB_CONFIG = initialize_platform_secrets()
 
 # 글로벌 블롭 스토리지 클라이언트 초기화
@@ -211,7 +211,7 @@ FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 
 class QuarantineActionRequest(BaseModel):
     row_ids: Optional[List[str]] = None      # None이면 전체 데이터 대상, 명시되면 해당 row_hash 타겟팅
-    reason: Optional[str] = "사유 기입 누락"   # 🎯 현업 표준 요구사항: 감사 추적용 조치 사유 수집
+    reason: Optional[str] = "사유 기입 누락"   # 감사 추적용 조치 사유 수집
 
 
 def _log_quarantine_action(domain: str, row_ids: list, action: str, reason: str):
@@ -268,7 +268,6 @@ def get_dashboard_data():
         conn = psycopg2.connect(**DB_CONFIG, cursor_factory=RealDictCursor)
         cursor = conn.cursor()
 
-        # 💡 실제 DB 컬럼명으로 수정하되, AS를 붙여 기존 변수명으로 변경해줍니다!
         query = """
             SELECT 
                 window_start, 
@@ -337,7 +336,6 @@ def login_user(login_info: LoginRequest):
 def list_versions(email: str = Query(...), domain: str = Query(...)):
     verify_domain_ownership(email, domain)
     try:
-        # Redis에 규칙이 있는데 DB 이력이 없으면 v1으로 자동 마이그레이션
         conn = psycopg2.connect(**DB_CONFIG, cursor_factory=RealDictCursor)
         cur = conn.cursor()
         cur.execute("SELECT COUNT(*) as cnt FROM rule_versions WHERE domain = %s", (domain,))
@@ -583,11 +581,9 @@ def api_approve_to_master(domain: str, req: QuarantineActionRequest):
 
         df_approved = df_q[df_q["_row_hash"].isin(req.row_ids)] if req.row_ids else df_q
 
-        # 메타데이터 아키텍처 칼럼 삭제 및 비즈니스 데이터 정형화
         drop_cols = [c for c in META_COLS if c in df_approved.columns]
         df_approved = df_approved.drop(columns=drop_cols)
 
-        # 기존 실버 파일 연동 확인
         try:
             df_silver = _get_blob_df("silver", f"{domain}/")
             if not df_silver.empty:
@@ -596,19 +592,15 @@ def api_approve_to_master(domain: str, req: QuarantineActionRequest):
         except Exception:
             df_silver = pd.DataFrame()
 
-        # 정형 마스터 데이터 결합 체계 구축 (Silver + Approved Quarantine)
         df_master = pd.concat([df_silver, df_approved], ignore_index=True) if not df_silver.empty else df_approved
         df_master["_merged_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # 데이터 유실 및 덮어쓰기 영구 방지를 위한 타임스탬프 기반 고유 파일명 명시
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         blob_filename = f"{domain}/master_report_{timestamp}.parquet"
         _write_blob_df("master", blob_filename, df_master)
 
-        # 중앙 관제 이력 감사 로그 적재
         _log_quarantine_action(domain, req.row_ids, "approve", req.reason)
 
-        # 마스터 통합 완료 후 기존 격리 저장소 동기화 최적화
         if req.row_ids:
             df_remain = df_q[~df_q["_row_hash"].isin(req.row_ids)]
             _write_blob_df("quarantine", f"{domain}/quarantine_data.parquet", df_remain)
@@ -628,17 +620,16 @@ def api_approve_to_master(domain: str, req: QuarantineActionRequest):
 
 @app.get("/api/download/{domain}")
 def download_master_csv(domain: str):
-    """정제 완료된 마스터(master) 컨테이너의 파일들을 실시간 병합하여 기업용 종합 정형 리포트(.csv)로 전송"""
+    """정제 완료된 마스터(master) 컨테이너의 파일들을 실시간 병합하여 종합 정형 리포트(.csv)로 전송"""
     try:
         df_master = _get_blob_df("master", f"{domain}/")
 
         if df_master.empty:
             raise HTTPException(
                 status_code=404,
-                detail=f"[{domain}] 마스터 컨테이너 영역에 구성된 최종 정형 보고서가 존재하지 않습니다."
+                detail=f"[{domain}] 마스터 컨테이너 영역에 최종 정형 보고서가 존재하지 않습니다."
             )
 
-        # 엑셀 깨짐 인코딩 방지를 위한 utf-8-sig 인코딩 처리 후 메모리 버퍼 구성
         csv_buffer = io.StringIO()
         df_master.to_csv(csv_buffer, index=False, encoding="utf-8-sig")
         csv_buffer.seek(0)
@@ -657,7 +648,10 @@ def download_master_csv(domain: str):
 
 @app.post("/api/upload")
 async def upload_batch_file(
-    company: str = Form(...), domain: str = Form(...), file: UploadFile = File(...)
+    company: str = Form(...), 
+    domain: str = Form(...), 
+    source: str = Form(...),  # 🎯 조치 완료: 프론트엔드가 전송한 소스명 바구니 장착!
+    file: UploadFile = File(...)
 ):
     filename = file.filename
     if not filename.lower().endswith((".csv", ".xlsx", ".xls")):
@@ -671,8 +665,8 @@ async def upload_batch_file(
         raise HTTPException(status_code=500, detail=f"임시 파일 저장 실패: {str(e)}")
 
     try:
-        # 이 시점에는 시스템 환경변수에 카프카 정보가 박혀있으므로 완벽하게 동작합니다!
-        result = process_batch_file(company=company, domain=domain, file_path=temp_file_path)
+        # 🎯 조치 완료: 파이프라인 엔진에 source를 탑재하여 회사명.도메인명.소스명 토픽으로 유도
+        result = process_batch_file(company=company, domain=domain, source=source, file_path=temp_file_path)
 
         if result.get("status") == "success":
             return {
@@ -703,8 +697,7 @@ def register_user(req: RegisterRequest):
         if cur.fetchone():
             raise HTTPException(status_code=400, detail="이미 가입된 이메일입니다.")
         
-        # 2. web_users 테이블에 유저 정보 적재 (비밀번호는 기존 프로젝트 규칙에 따라 1234 고정 또는 평문 처리)
-        # 만약 실제 password를 해싱 없이 넣는 구조라면 아래와 같이 매핑합니다.
+        # 2. web_users 테이블에 유저 정보 적재
         insert_user_query = """
             INSERT INTO web_users (email, password_hash, company_name, domain_name)
             VALUES (%s, %s, %s, %s) RETURNING user_id;
@@ -712,7 +705,7 @@ def register_user(req: RegisterRequest):
         cur.execute(insert_user_query, (req.email, req.password, req.company_name, req.domain_name))
         user_id = cur.fetchone()['user_id']
         
-        # 3. 🎯 [핵심 요구사항] 정제된 bronze_folder 명명 규칙 적용 (소문자화 및 공백 제거)
+        # 3. 정제된 bronze_folder 명명 규칙 적용 (소문자화 및 공백 제거)
         clean_company = req.company_name.strip().lower().replace(" ", "")
         clean_domain = req.domain_name.strip().lower().replace(" ", "")
         bronze_folder_name = f"{clean_company}_{clean_domain}"
@@ -722,7 +715,6 @@ def register_user(req: RegisterRequest):
             INSERT INTO data_sources (user_id, source_name, bronze_folder, data_source_type, status, created_at)
             VALUES (%s, %s, %s, %s, 'active', NOW());
         """
-        # 소스 이름은 기본적으로 '기본 정형 데이터 소스' 등으로 명시합니다.
         source_name = f"{req.company_name} {req.domain_name} Batch Source"
         cur.execute(insert_source_query, (user_id, source_name, bronze_folder_name, 'batch'))
         
