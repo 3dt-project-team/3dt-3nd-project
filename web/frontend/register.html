@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DataCops - 회원가입</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-slate-950 text-white font-sans min-h-screen flex flex-col justify-between">
+
+    <nav class="max-w-7xl mx-auto w-full px-8 py-6 flex justify-between items-center border-b border-slate-800/60">
+        <div class="flex items-center space-x-3">
+            <a href="/" class="text-2xl font-black tracking-wider text-indigo-400">⚡ DataCops</a>
+        </div>
+        <div>
+            <a href="login.html" class="text-sm font-semibold text-slate-300 hover:text-white transition-colors">로그인으로 이동</a>
+        </div>
+    </nav>
+
+    <main class="max-w-md mx-auto w-full px-6 py-12">
+        <div class="bg-slate-900 border border-slate-800 p-8 rounded-2xl shadow-xl shadow-indigo-500/5 space-y-6">
+            <div class="text-center space-y-2">
+                <h2 class="text-2xl font-black tracking-tight text-slate-100">플랫폼 회원가입</h2>
+                <p class="text-xs text-slate-400">새로운 데이터 소스와 파이프라인 관제를 시작하세요</p>
+            </div>
+
+            <form id="register-form" class="space-y-4">
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">이메일 계정</label>
+                    <input type="email" id="reg-email" required placeholder="admin@company.com" class="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500 transition-colors">
+                </div>
+                
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">비밀번호</label>
+                    <input type="password" id="reg-password" required placeholder="••••••••" class="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500 transition-colors">
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Company (회사명)</label>
+                    <input type="text" id="reg-company" required placeholder="samsung" class="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500 transition-colors">
+                </div>
+
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl shadow-md shadow-indigo-600/20 transition-all mt-2 cursor-pointer">
+                    계정 생성 및 스토리지 개설
+                </button>
+            </form>
+
+            <div id="reg-status" class="text-xs font-semibold text-center min-h-[16px]"></div>
+        </div>
+    </main>
+
+    <footer class="text-center py-8 border-t border-slate-900 text-xs text-slate-600 font-medium">
+        © 2026 Team DataCops. All rights reserved.
+    </footer>
+
+    <script>
+        document.getElementById('register-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const statusDiv = document.getElementById('reg-status');
+            
+            const email = document.getElementById('reg-email').value.trim();
+            const password = document.getElementById('reg-password').value.trim();
+            const company_name = document.getElementById('reg-company').value.trim();
+
+            statusDiv.innerHTML = '<span class="text-indigo-400">⏳ 파이프라인 인프라 매핑 중...</span>';
+
+            // 💡 조치 완료: 백엔드로 더 이상 domain_name을 전송하지 않음
+            fetch('/api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password, company_name })
+            })
+            .then(async (res) => {
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || '가입 처리 중 오류 발생');
+                return data;
+            })
+            .then((data) => {
+                statusDiv.innerHTML = `<span class="text-emerald-400">✅ 회원가입 성공!</span>`;
+                alert('가입이 완료되었습니다! 로그인 페이지로 이동합니다.');
+                window.location.href = 'login.html';
+            })
+            .catch((err) => {
+                statusDiv.innerHTML = `<span class="text-rose-400">❌ 실패: ${err.message}</span>`;
+            });
+        });
+    </script>
+</body>
+</html>

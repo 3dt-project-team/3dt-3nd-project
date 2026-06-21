@@ -3,7 +3,23 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # 1. 웹 서비스 구동에 필요한 핵심 패키지 사전 설치
-RUN pip install --no-cache-dir fastapi uvicorn azure-identity azure-keyvault-secrets psycopg2-binary requests python-multipart "redis[hiredis]" pandas openpyxl python-dotenv confluent-kafka
+# 기존 명령어 맨 뒤에 pyarrow와 azure-storage-blob을 안전하게 추가했습니다.
+RUN pip install --no-cache-dir \
+    fastapi \
+    uvicorn \
+    azure-identity \
+    azure-keyvault-secrets \
+    psycopg2-binary \
+    requests \
+    python-multipart \
+    "redis[hiredis]" \
+    pandas \
+    openpyxl \
+    python-dotenv \
+    confluent-kafka \
+    pyarrow \
+    azure-storage-blob \
+    kafka-python
 
 # 2. 백엔드와 프론트엔드 폴더를 통째로 상자 안으로 복사
 COPY frontend/ ./frontend/

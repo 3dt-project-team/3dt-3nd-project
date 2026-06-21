@@ -1,18 +1,21 @@
+import io
 import json
 import os
 import shutil
-from typing import Optional
+from datetime import datetime
+from typing import List, Optional
 
+import pandas as pd
 import psycopg2
-
 # Azure Key Vault 부품
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
+from azure.storage.blob import BlobServiceClient
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
-from psycopg2.extras import RealDictCursor
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
+from psycopg2.extras import RealDictCursor
 
 app = FastAPI(title="DataCops 품질 관제 플랫폼 API")
 
@@ -26,7 +29,7 @@ app.add_middleware(
 )
 
 
-# 🔐 [개조] Azure Key Vault에서 DB와 Kafka 정보를 모두 가져와 시스템에 주입하는 함수
+# 🔐 Azure Key Vault에서 DB, Kafka, Storage 정보를 모두 가져와 시스템에 주입하는 함수
 def initialize_platform_secrets():
     try:
         VAULT_URL = "https://kv-sense-team4.vault.azure.net/"
@@ -39,17 +42,21 @@ def initialize_platform_secrets():
         db_user = client.get_secret("db-user").value
         db_password = client.get_secret("db-password").value
 
-        # 2. 🌟 [핵심] Kafka 정보도 금고에서 열기 (키볼트 내 실제 이름과 매칭하세요!)
+        # 2. Kafka 정보도 금고에서 열기
         kafka_servers = client.get_secret("kafka-bootstrap-servers").value
         kafka_user = client.get_secret("kafka-username").value
         kafka_pass = client.get_secret("kafka-password").value
 
-        # 3. 🔥 [치트키] 팀원의 코드가 읽을 수 있도록 시스템 환경변수에 실시간 주입!
+        # 3. 애저 스토리지 연결 문자열도 금고에서 안전하게 확보
+        storage_conn = client.get_secret("storage-connection-string").value
+
+        # 시스템 환경변수에 실시간 주입
         os.environ["KAFKA_BOOTSTRAP_SERVERS"] = kafka_servers
         os.environ["KAFKA_USERNAME"] = kafka_user
         os.environ["KAFKA_PASSWORD"] = kafka_pass
+        os.environ["AZURE_STORAGE_CONNECTION_STRING"] = storage_conn
 
-        print("✅ Key Vault에서 모든 DB 및 Kafka 접속 정보 주입 완료!")
+        print("✅ Key Vault에서 모든 DB, Kafka, Storage 접속 정보 주입 완료!")
 
         return {
             "host": db_host,
@@ -65,8 +72,13 @@ def initialize_platform_secrets():
         ) from e
 
 
-# 🚀 팀원 코드가 실행되기 전에 "먼저" 금고를 열고 환경변수를 채웁니다!
+# 서버 기동 전 안전하게 비밀 키 정보 로드 및 도커 환경 설정 정합성 부여
 DB_CONFIG = initialize_platform_secrets()
+
+# 글로벌 블롭 스토리지 클라이언트 초기화
+blob_service_client = BlobServiceClient.from_connection_string(
+    os.environ["AZURE_STORAGE_CONNECTION_STRING"]
+)
 
 
 def ensure_rule_versions_table():
@@ -195,17 +207,63 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 
 
+# ── 🛠️ 격리 및 마스터 데이터 관리를 위한 추가 Pydantic 모델 & 헬퍼 함수 ──
+
+class QuarantineActionRequest(BaseModel):
+    row_ids: Optional[List[str]] = None      
+    reason: Optional[str] = "사유 기입 누락"   
+
+
+def _log_quarantine_action(domain: str, row_ids: list, action: str, reason: str):
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        cur = conn.cursor()
+        cur.execute(
+            """
+            INSERT INTO quarantine_actions (domain, row_ids, action, reason, reviewed_at)
+            VALUES (%s, %s, %s, %s, now())
+        """,
+            (domain, json.dumps(row_ids) if row_ids else None, action, reason),
+        )
+        conn.commit()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"[WARN] 데이터 관제 액션 이력 PostgreSQL 적재 실패: {e}")
+
+
+def _get_blob_df(container: str, prefix: str) -> pd.DataFrame:
+    container_client = blob_service_client.get_container_client(container)
+    blob_list = container_client.list_blobs(name_starts_with=prefix)
+
+    dfs = []
+    for blob in blob_list:
+        if blob.name.endswith(".parquet"):
+            blob_client = container_client.get_blob_client(blob.name)
+            data = blob_client.download_blob().readall()
+            dfs.append(pd.read_parquet(io.BytesIO(data)))
+
+    return pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
+
+
+def _write_blob_df(container: str, blob_path: str, df: pd.DataFrame):
+    out_buffer = io.BytesIO()
+    df.to_parquet(out_buffer, index=False, engine="pyarrow")
+    out_buffer.seek(0)
+
+    blob_client = blob_service_client.get_blob_client(container=container, blob=blob_path)
+    blob_client.upload_blob(out_buffer.read(), overwrite=True)
+
+
 # ── 📊 데이터 로직 API 영역 ──────────────────────────────────
 
 
-# 📊 대시보드 통계 데이터를 PostgreSQL에서 꺼내오는 API
 @app.get("/api/dashboard")
 def get_dashboard_data():
     try:
         conn = psycopg2.connect(**DB_CONFIG, cursor_factory=RealDictCursor)
         cursor = conn.cursor()
 
-        # 💡 실제 DB 컬럼명으로 수정하되, AS를 붙여 기존 변수명으로 변경해줍니다!
         query = """
             SELECT 
                 window_start, 
@@ -231,6 +289,12 @@ def get_dashboard_data():
 class LoginRequest(BaseModel):
     email: str
     password: str
+
+# 💡 조치 완료: 가입 DTO 모델에서 domain_name 항목 제거
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+    company_name: str
 
 
 @app.post("/api/login")
@@ -268,7 +332,6 @@ def login_user(login_info: LoginRequest):
 def list_versions(email: str = Query(...), domain: str = Query(...)):
     verify_domain_ownership(email, domain)
     try:
-        # Redis에 규칙이 있는데 DB 이력이 없으면 v1으로 자동 마이그레이션
         conn = psycopg2.connect(**DB_CONFIG, cursor_factory=RealDictCursor)
         cur = conn.cursor()
         cur.execute("SELECT COUNT(*) as cnt FROM rule_versions WHERE domain = %s", (domain,))
@@ -429,7 +492,7 @@ def get_rules(email: str = Query(...), domain: str = Query(...)):
 class ToggleRequest(BaseModel):
     email: str
     domain: str
-    rule_type: str  # "expectations" | "anomaly_rules"
+    rule_type: str  
     rule_index: int
     enabled: bool
 
@@ -467,12 +530,121 @@ def toggle_rule(body: ToggleRequest):
         raise HTTPException(status_code=500, detail=f"규칙 토글 실패: {str(e)}")
 
 
+# ── 🛡️ 격리(Quarantine) 위반 데이터 사유 수정 및 제어 API 영역 ────────
+
+
+@app.post("/api/quarantine/{domain}/delete")
+def api_delete_quarantine(domain: str, req: QuarantineActionRequest):
+    try:
+        container_client = blob_service_client.get_container_client("quarantine")
+
+        if req.row_ids:
+            df = _get_blob_df("quarantine", f"{domain}/")
+            if not df.empty and "_row_hash" in df.columns:
+                df_remain = df[~df["_row_hash"].isin(req.row_ids)]
+                _write_blob_df("quarantine", f"{domain}/quarantine_data.parquet", df_remain)
+            target_str = f"{len(req.row_ids)}건 행"
+        else:
+            blob_list = container_client.list_blobs(name_starts_with=f"{domain}/")
+            for blob in blob_list:
+                container_client.delete_blob(blob.name)
+            target_str = "전체 데이터"
+
+        _log_quarantine_action(domain, req.row_ids, "delete", req.reason)
+
+        return {
+            "status": "success",
+            "message": f"[{domain}] {target_str} 폐기 완료 (조치사유: {req.reason})",
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"격리 데이터 폐기 실패: {str(e)}")
+
+
+@app.post("/api/quarantine/{domain}/approve")
+def api_approve_to_master(domain: str, req: QuarantineActionRequest):
+    META_COLS = [
+        "_quarantine_reason", "_ingest_ts", "_source_type", "_platform",
+        "_company", "_domain", "_row_hash", "_quarantine_ts",
+        "_processed_at", "_run_id", "_epoch_id"
+    ]
+
+    try:
+        df_q = _get_blob_df("quarantine", f"{domain}/")
+        if df_q.empty:
+            raise HTTPException(status_code=404, detail="처리할 대상 격리 데이터 파티션이 비어있습니다.")
+
+        df_approved = df_q[df_q["_row_hash"].isin(req.row_ids)] if req.row_ids else df_q
+
+        drop_cols = [c for c in META_COLS if c in df_approved.columns]
+        df_approved = df_approved.drop(columns=drop_cols)
+
+        try:
+            df_silver = _get_blob_df("silver", f"{domain}/")
+            if not df_silver.empty:
+                drop_s = [c for c in META_COLS if c in df_silver.columns]
+                df_silver = df_silver.drop(columns=drop_s)
+        except Exception:
+            df_silver = pd.DataFrame()
+
+        df_master = pd.concat([df_silver, df_approved], ignore_index=True) if not df_silver.empty else df_approved
+        df_master["_merged_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        blob_filename = f"{domain}/master_report_{timestamp}.parquet"
+        _write_blob_df("master", blob_filename, df_master)
+
+        _log_quarantine_action(domain, req.row_ids, "approve", req.reason)
+
+        if req.row_ids:
+            df_remain = df_q[~df_q["_row_hash"].isin(req.row_ids)]
+            _write_blob_df("quarantine", f"{domain}/quarantine_data.parquet", df_remain)
+        else:
+            container_client = blob_service_client.get_container_client("quarantine")
+            blob_list = container_client.list_blobs(name_starts_with=f"{domain}/")
+            for blob in blob_list:
+                container_client.delete_blob(blob.name)
+
+        return {"status": "success", "message": f"[{domain}] 격리 데이터 마스터 컨테이너 정상 갱신 및 결합 승인 완료"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"마스터 강제 병합 및 업데이트 실패: {str(e)}")
+
+
+# ── 💾 마스터(Master) 컨테이너 정형화 리포트 다운로드 API 영역 ───────
+
+
+@app.get("/api/download/{domain}")
+def download_master_csv(domain: str):
+    try:
+        df_master = _get_blob_df("master", f"{domain}/")
+
+        if df_master.empty:
+            raise HTTPException(
+                status_code=404,
+                detail=f"[{domain}] 마스터 컨테이너 영역에 최종 정형 보고서가 존재하지 않습니다."
+            )
+
+        csv_buffer = io.StringIO()
+        df_master.to_csv(csv_buffer, index=False, encoding="utf-8-sig")
+        csv_buffer.seek(0)
+
+        return StreamingResponse(
+            io.BytesIO(csv_buffer.getvalue().encode("utf-8-sig")),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={domain}_final_master_report.csv"}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"다운로드 파일 연산 실패: {str(e)}")
+
+
 # ── 🚀 파일 업로드 및 카프카 적재 API 영역 ─────────────────────
 
 
 @app.post("/api/upload")
 async def upload_batch_file(
-    company: str = Form(...), domain: str = Form(...), file: UploadFile = File(...)
+    company: str = Form(...), 
+    domain: str = Form(...), 
+    source: str = Form(...),  
+    file: UploadFile = File(...)
 ):
     filename = file.filename
     if not filename.lower().endswith((".csv", ".xlsx", ".xls")):
@@ -486,8 +658,7 @@ async def upload_batch_file(
         raise HTTPException(status_code=500, detail=f"임시 파일 저장 실패: {str(e)}")
 
     try:
-        # 이 시점에는 시스템 환경변수에 카프카 정보가 박혀있으므로 완벽하게 동작합니다!
-        result = process_batch_file(company=company, domain=domain, file_path=temp_file_path)
+        result = process_batch_file(company=company, domain=domain, source=source, file_path=temp_file_path)
 
         if result.get("status") == "success":
             return {
@@ -505,12 +676,49 @@ async def upload_batch_file(
         if os.path.exists(temp_file_path):
             os.remove(temp_file_path)
         raise HTTPException(status_code=500, detail=f"배치 파이프라인 연동 중 예외 발생: {str(e)}")
+    
+
+@app.post("/api/register")
+def register_user(req: RegisterRequest):
+    conn = psycopg2.connect(**DB_CONFIG)
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    
+    try:
+        cur.execute("SELECT 1 FROM web_users WHERE email = %s;", (req.email,))
+        if cur.fetchone():
+            raise HTTPException(status_code=400, detail="이미 가입된 이메일입니다.")
+        
+        # 💡 조치 완료: domain_name을 제외하고 회사 정보 위주로만 계정을 우선 생성
+        insert_user_query = """
+            INSERT INTO web_users (email, password_hash, company_name, domain_name)
+            VALUES (%s, %s, %s, NULL) RETURNING user_id;
+        """
+        cur.execute(insert_user_query, (req.email, req.password, req.company_name))
+        
+        conn.commit()
+        return {
+            "status": "success", 
+            "message": "회원가입 완료"
+        }
+        
+    except psycopg2.Error as db_err:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"DB 적재 실패: {str(db_err)}")
+    except HTTPException as he:
+        conn.rollback()
+        raise he
+    finally:
+        cur.close()
+        conn.close()
 
 
 # ── 🌐 프론트엔드 정적 페이지 서빙 영역 ────────────────────────
 
 
+# 🎯 조치 완료: 정적 페이지 라우팅에 /index.html 및 /index 멀티 바인딩 확장 탑재
 @app.get("/")
+@app.get("/index.html")
+@app.get("/index")
 def read_index():
     return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
 
@@ -536,3 +744,9 @@ def read_rules():
 @app.get("/app.js")
 def read_js():
     return FileResponse(os.path.join(FRONTEND_DIR, "app.js"))
+
+
+@app.get("/register.html")
+@app.get("/register")
+def read_register():
+    return FileResponse(os.path.join(FRONTEND_DIR, "register.html"))

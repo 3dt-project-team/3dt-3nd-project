@@ -1,0 +1,237 @@
+{
+  "suite_name": "fin_loans_quality_suite",
+  "domain": "fin_loans",
+  "version": "1.0",
+  "generated_at": "2026-06-17T08:27:55.622023Z",
+  "model": "Llama-4-Maverick-17B-128E-Instruct-FP8",
+  "dataset": "testdatabox/finance-fraud-and-loans-dataset-testdatabox",
+  "table": "loans.csv",
+  "null_strategies": {
+    "LoanID": {
+      "strategy": "drop",
+      "default_value": null,
+      "reason": "Identifier column"
+    },
+    "AccountID": {
+      "strategy": "drop",
+      "default_value": null,
+      "reason": "Identifier column"
+    },
+    "LoanStatusID": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column"
+    },
+    "PrincipalAmount": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column"
+    },
+    "InterestRate": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column"
+    },
+    "StartDate": {
+      "strategy": "fill_forward",
+      "default_value": null,
+      "reason": "Timestamp column"
+    },
+    "EstimatedEndDate": {
+      "strategy": "fill_forward",
+      "default_value": null,
+      "reason": "Timestamp column"
+    }
+  },
+  "expectations": [
+    {
+      "rule_id": "RULE_FIN__001",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "LoanID",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Primary key cannot be null"
+    },
+    {
+      "rule_id": "RULE_FIN__002",
+      "expectation_type": "expect_column_values_to_be_unique",
+      "column": "LoanID",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Primary key must be unique"
+    },
+    {
+      "rule_id": "RULE_FIN__003",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "AccountID",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Foreign key cannot be null"
+    },
+    {
+      "rule_id": "RULE_FIN__004",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "LoanStatusID",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Loan status is required"
+    },
+    {
+      "rule_id": "RULE_FIN__005",
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "column": "LoanStatusID",
+      "kwargs": {
+        "value_set": [
+          1,
+          2,
+          3
+        ]
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Loan status must be one of the allowed values"
+    },
+    {
+      "rule_id": "RULE_FIN__006",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "PrincipalAmount",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Principal amount is required"
+    },
+    {
+      "rule_id": "RULE_FIN__007",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "PrincipalAmount",
+      "kwargs": {
+        "min_value": 0
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Principal amount must be non-negative"
+    },
+    {
+      "rule_id": "RULE_FIN__008",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "InterestRate",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Interest rate is required"
+    },
+    {
+      "rule_id": "RULE_FIN__009",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "InterestRate",
+      "kwargs": {
+        "min_value": 0
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Interest rate must be non-negative"
+    },
+    {
+      "rule_id": "RULE_FIN__010",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "StartDate",
+      "kwargs": {},
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Start date is mostly required"
+    },
+    {
+      "rule_id": "RULE_FIN__011",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "EstimatedEndDate",
+      "kwargs": {},
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Estimated end date is mostly required"
+    }
+  ],
+  "anomaly_rules": [
+    {
+      "rule_id": "RULE_FIN__012",
+      "name": "LoanID Z-Score Anomaly",
+      "columns": [
+        "LoanID"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "LoanID is numeric and has a significant standard deviation"
+    },
+    {
+      "rule_id": "RULE_FIN__013",
+      "name": "AccountID Z-Score Anomaly",
+      "columns": [
+        "AccountID"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "AccountID is numeric and has a significant standard deviation"
+    },
+    {
+      "rule_id": "RULE_FIN__014",
+      "name": "LoanStatusID Frequency Anomaly",
+      "columns": [
+        "LoanStatusID"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "LoanStatusID is categorical"
+    },
+    {
+      "rule_id": "RULE_FIN__015",
+      "name": "PrincipalAmount Z-Score Anomaly",
+      "columns": [
+        "PrincipalAmount"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "PrincipalAmount is numeric and has a significant standard deviation"
+    },
+    {
+      "rule_id": "RULE_FIN__016",
+      "name": "PrincipalAmount IQR Anomaly",
+      "columns": [
+        "PrincipalAmount"
+      ],
+      "method": "iqr",
+      "threshold": 1.5,
+      "severity": "warning",
+      "reason": "PrincipalAmount is numeric and potentially skewed"
+    },
+    {
+      "rule_id": "RULE_FIN__017",
+      "name": "InterestRate Z-Score Anomaly",
+      "columns": [
+        "InterestRate"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "InterestRate is numeric and has a significant standard deviation"
+    },
+    {
+      "rule_id": "RULE_FIN__018",
+      "name": "InterestRate IQR Anomaly",
+      "columns": [
+        "InterestRate"
+      ],
+      "method": "iqr",
+      "threshold": 1.5,
+      "severity": "warning",
+      "reason": "InterestRate is numeric and potentially skewed"
+    }
+  ],
+  "text_quality_columns": []
+}
