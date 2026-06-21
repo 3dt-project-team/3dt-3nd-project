@@ -292,6 +292,12 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
+# 💡 조치 완료: 가입 DTO 모델에서 domain_name 항목 제거
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+    company_name: str
+
 
 # 💡 조치 완료: 가입 DTO 모델에서 domain_name 항목 제거
 class RegisterRequest(BaseModel):
@@ -747,6 +753,40 @@ async def upload_batch_file(
         if os.path.exists(temp_file_path):
             os.remove(temp_file_path)
         raise HTTPException(status_code=500, detail=f"배치 파이프라인 연동 중 예외 발생: {str(e)}")
+    
+
+@app.post("/api/register")
+def register_user(req: RegisterRequest):
+    conn = psycopg2.connect(**DB_CONFIG)
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    
+    try:
+        cur.execute("SELECT 1 FROM web_users WHERE email = %s;", (req.email,))
+        if cur.fetchone():
+            raise HTTPException(status_code=400, detail="이미 가입된 이메일입니다.")
+        
+        # 💡 조치 완료: domain_name을 제외하고 회사 정보 위주로만 계정을 우선 생성
+        insert_user_query = """
+            INSERT INTO web_users (email, password_hash, company_name, domain_name)
+            VALUES (%s, %s, %s, NULL) RETURNING user_id;
+        """
+        cur.execute(insert_user_query, (req.email, req.password, req.company_name))
+        
+        conn.commit()
+        return {
+            "status": "success", 
+            "message": "회원가입 완료"
+        }
+        
+    except psycopg2.Error as db_err:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"DB 적재 실패: {str(db_err)}")
+    except HTTPException as he:
+        conn.rollback()
+        raise he
+    finally:
+        cur.close()
+        conn.close()
 
 
 @app.post("/api/register")

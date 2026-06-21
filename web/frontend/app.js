@@ -119,6 +119,7 @@ startUploadBtn.addEventListener('click', () => {
 function uploadFileToServer(file) {
     const email = localStorage.getItem('email');
     const domain = document.getElementById('domain').value.trim();
+    const source = document.getElementById('source').value; 
 
     if (!email) {
         alert("로그인이 필요합니다.");
@@ -136,6 +137,7 @@ function uploadFileToServer(file) {
     const formData = new FormData();
     formData.append("email", email);
     formData.append("domain", domain);
+    formData.append("source", source); 
     formData.append("file", file);
 
     fetch("/api/upload", {
