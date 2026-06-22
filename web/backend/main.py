@@ -260,26 +260,54 @@ def _write_blob_df(container: str, blob_path: str, df: pd.DataFrame):
 # ── 📊 데이터 로직 API 영역 ──────────────────────────────────
 
 
+# 🎯 [개조 완료] 타사 데이터 원천 필터링 격리 체계 수립
 @app.get("/api/dashboard")
-def get_dashboard_data():
+def get_dashboard_data(email: str = Query(...), domain: Optional[str] = Query(None)):
     try:
         conn = psycopg2.connect(**DB_CONFIG, cursor_factory=RealDictCursor)
         cursor = conn.cursor()
 
-        query = """
-            SELECT 
-                window_start, 
-                domain_name, 
-                total_ingested_rows AS total_cnt, 
-                passed_rows AS clean_cnt, 
-                quarantined_rows AS error_cnt, 
-                data_purity_rate AS purity_rate 
-            FROM web_main_dashboard
-            ORDER BY window_start DESC;
-        """
-        cursor.execute(query)
-        rows = cursor.fetchall()
+        # 1. 호출한 유저의 회사명 추출
+        cursor.execute("SELECT company_name FROM web_users WHERE email = %s", (email,))
+        user = cursor.fetchone()
+        if not user:
+            return {"status": "success", "count": 0, "data": []}
 
+        company_name = user["company_name"]
+
+        import re
+        def _normalize(s: str) -> str:
+            s = s.lower().strip()
+            s = re.sub(r"[^a-z0-9_]", "_", s)
+            s = re.sub(r"_+", "_", s).strip("_")
+            return s[:50]
+
+        # 타사 위키피디아 간섭 방어용 회사 접두사 규격 생성
+        company_prefix = f"{_normalize(company_name)}_"
+
+        if domain:
+            # 2-A. 특정 부서 도메인이 찍혀 넘어왔다면 해당 파이프라인만 정밀 조제 (예: asung_ecommerce)
+            exact_target = f"{company_prefix}{_normalize(domain)}"
+            query = """
+                SELECT window_start, domain_name, total_ingested_rows AS total_cnt, 
+                       passed_rows AS clean_cnt, quarantined_rows AS error_cnt, data_purity_rate AS purity_rate 
+                FROM web_main_dashboard
+                WHERE domain_name = %s
+                ORDER BY window_start DESC;
+            """
+            cursor.execute(query, (exact_target,))
+        else:
+            # 2-B. 기본 로딩 시 내 소유의 파이프라인만 LIKE 스캔으로 안전 격리 로드
+            query = """
+                SELECT window_start, domain_name, total_ingested_rows AS total_cnt, 
+                       passed_rows AS clean_cnt, quarantined_rows AS error_cnt, data_purity_rate AS purity_rate 
+                FROM web_main_dashboard
+                WHERE domain_name LIKE %s
+                ORDER BY window_start DESC;
+            """
+            cursor.execute(query, (company_prefix + "%",))
+
+        rows = cursor.fetchall()
         cursor.close()
         conn.close()
 
@@ -312,7 +340,6 @@ def login_user(login_info: LoginRequest):
         cursor.close()
         conn.close()
 
-        # 🎯 조치 완료: 테스트 문자열 "1234" 검증 로직을 도려내고, DB에 저장된 실제 password_hash와 일치하는지 정밀 검사합니다.
         if not user or login_info.password != user["password_hash"]:
             raise HTTPException(status_code=401, detail="이메일 또는 비밀번호가 올바르지 않습니다.")
 
