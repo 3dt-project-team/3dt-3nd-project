@@ -292,14 +292,6 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
-# 💡 조치 완료: 가입 DTO 모델에서 domain_name 항목 제거
-class RegisterRequest(BaseModel):
-    email: str
-    password: str
-    company_name: str
-
-
-# 💡 조치 완료: 가입 DTO 모델에서 domain_name 항목 제거
 class RegisterRequest(BaseModel):
     email: str
     password: str
@@ -320,7 +312,8 @@ def login_user(login_info: LoginRequest):
         cursor.close()
         conn.close()
 
-        if not user or login_info.password != "1234":
+        # 🎯 조치 완료: 테스트 문자열 "1234" 검증 로직을 도려내고, DB에 저장된 실제 password_hash와 일치하는지 정밀 검사합니다.
+        if not user or login_info.password != user["password_hash"]:
             raise HTTPException(status_code=401, detail="이메일 또는 비밀번호가 올바르지 않습니다.")
 
         return {
@@ -572,7 +565,7 @@ def api_delete_quarantine(domain: str, req: QuarantineActionRequest):
 @app.post("/api/quarantine/{domain}/approve")
 def api_approve_to_master(domain: str, req: QuarantineActionRequest):
     META_COLS = [
-        "_quarantine_reason",
+        "__quarantine_reason",
         "_ingest_ts",
         "_source_type",
         "_platform",
@@ -675,7 +668,6 @@ async def upload_batch_file(
     if not filename.lower().endswith((".csv", ".xlsx", ".xls")):
         raise HTTPException(status_code=400, detail="CSV 또는 Excel 파일만 업로드 가능합니다.")
 
-    # 1. 이메일로 회사명 조회 (클라이언트 값 신뢰 안 함)
     try:
         conn = psycopg2.connect(**DB_CONFIG, cursor_factory=RealDictCursor)
         cur = conn.cursor()
@@ -692,7 +684,6 @@ async def upload_batch_file(
     user_id = user["user_id"]
     company_name = user["company_name"]
 
-    # bronze_folder = normalize(company)_normalize(domain) — TenantManager와 동일한 규칙
     import re
 
     def _normalize(s: str) -> str:
@@ -703,10 +694,10 @@ async def upload_batch_file(
 
     bronze_folder = f"{_normalize(company_name)}_{_normalize(domain)}"
 
-    # 2. data_sources에 등록 (없으면 삽입, 있으면 유지)
     try:
         conn = psycopg2.connect(**DB_CONFIG)
         cur = conn.cursor()
+        
         cur.execute(
             "SELECT 1 FROM data_sources WHERE user_id = %s AND bronze_folder = %s",
             (user_id, bronze_folder),
@@ -719,13 +710,17 @@ async def upload_batch_file(
                 """,
                 (user_id, bronze_folder, bronze_folder),
             )
+            
+        cur.execute(
+            "UPDATE web_users SET domain_name = %s WHERE user_id = %s",
+            (domain, user_id)
+        )
+        
         conn.commit()
-        cur.close()
         conn.close()
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"도메인 등록 실패: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"도메인 메타 정보 동기화 실패: {str(e)}")
 
-    # 3. 임시 파일 저장
     temp_file_path = os.path.join(UPLOAD_DIR, filename)
     try:
         with open(temp_file_path, "wb") as buffer:
@@ -733,7 +728,6 @@ async def upload_batch_file(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"임시 파일 저장 실패: {str(e)}")
 
-    # 4. Kafka 전송
     try:
         result = process_batch_file(company=company_name, domain=domain, file_path=temp_file_path)
 
@@ -765,10 +759,9 @@ def register_user(req: RegisterRequest):
         if cur.fetchone():
             raise HTTPException(status_code=400, detail="이미 가입된 이메일입니다.")
         
-        # 💡 조치 완료: domain_name을 제외하고 회사 정보 위주로만 계정을 우선 생성
         insert_user_query = """
             INSERT INTO web_users (email, password_hash, company_name, domain_name)
-            VALUES (%s, %s, %s, NULL) RETURNING user_id;
+            VALUES (%s, %s, %s, 'default') RETURNING user_id;
         """
         cur.execute(insert_user_query, (req.email, req.password, req.company_name))
         
@@ -789,41 +782,9 @@ def register_user(req: RegisterRequest):
         conn.close()
 
 
-@app.post("/api/register")
-def register_user(req: RegisterRequest):
-    conn = psycopg2.connect(**DB_CONFIG)
-    cur = conn.cursor(cursor_factory=RealDictCursor)
-
-    try:
-        cur.execute("SELECT 1 FROM web_users WHERE email = %s;", (req.email,))
-        if cur.fetchone():
-            raise HTTPException(status_code=400, detail="이미 가입된 이메일입니다.")
-
-        # 💡 조치 완료: domain_name을 제외하고 회사 정보 위주로만 계정을 우선 생성
-        insert_user_query = """
-            INSERT INTO web_users (email, password_hash, company_name, domain_name)
-            VALUES (%s, %s, %s, NULL) RETURNING user_id;
-        """
-        cur.execute(insert_user_query, (req.email, req.password, req.company_name))
-
-        conn.commit()
-        return {"status": "success", "message": "회원가입 완료"}
-
-    except psycopg2.Error as db_err:
-        conn.rollback()
-        raise HTTPException(status_code=500, detail=f"DB 적재 실패: {str(db_err)}")
-    except HTTPException as he:
-        conn.rollback()
-        raise he
-    finally:
-        cur.close()
-        conn.close()
-
-
 # ── 🌐 프론트엔드 정적 페이지 서빙 영역 ────────────────────────
 
 
-# 🎯 조치 완료: 정적 페이지 라우팅에 /index.html 및 /index 멀티 바인딩 확장 탑재
 @app.get("/")
 @app.get("/index.html")
 @app.get("/index")
