@@ -39,10 +39,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 sys.path.append(os.path.dirname(__file__))
-from tenant_manager import TenantManager
+from tenant_manager import TenantManager  # noqa: E402
 
 try:
     from kafka import KafkaProducer
+
     KAFKA_AVAILABLE = True
 except ImportError:
     KAFKA_AVAILABLE = False
@@ -53,20 +54,20 @@ if not _bootstrap:
     raise EnvironmentError("❌ KAFKA_BOOTSTRAP_SERVERS 환경변수가 없습니다. .env 확인하세요.")
 
 KAFKA_PRODUCER_CONFIG = {
-    "bootstrap_servers":   _bootstrap.split(","),
-    "security_protocol":   "SASL_PLAINTEXT",
-    "sasl_mechanism":      "SCRAM-SHA-256",
+    "bootstrap_servers": _bootstrap.split(","),
+    "security_protocol": "SASL_PLAINTEXT",
+    "sasl_mechanism": "SCRAM-SHA-256",
     "sasl_plain_username": os.getenv("KAFKA_USERNAME"),
     "sasl_plain_password": os.getenv("KAFKA_PASSWORD"),
-    "value_serializer":    lambda v: json.dumps(v, ensure_ascii=False).encode("utf-8"),
-    "acks":    "all",
+    "value_serializer": lambda v: json.dumps(v, ensure_ascii=False).encode("utf-8"),
+    "acks": "all",
     "retries": 3,
 }
 
 # ── 파일 크기 제한 ───────────────────────────────────────
-LIMIT_MB       = 1024  # 1GB — 초과 시 거부
-EXCEL_LIMIT_MB = 200   # Excel 200MB 초과 시 CSV 변환 요구
-CHUNK_SIZE     = 10_000  # 청크 처리 행 수
+LIMIT_MB = 1024  # 1GB — 초과 시 거부
+EXCEL_LIMIT_MB = 200  # Excel 200MB 초과 시 CSV 변환 요구
+CHUNK_SIZE = 10_000  # 청크 처리 행 수
 
 
 # ── Kafka 연결 ───────────────────────────────────────────
@@ -104,7 +105,7 @@ def _read_file(file_path: str, file_size_mb: float):
             return [pd.read_excel(file_path)]
 
         else:
-            print(f"  ❌ 지원 형식: CSV, Excel(.xlsx, .xls)만 가능")
+            print("  ❌ 지원 형식: CSV, Excel(.xlsx, .xls)만 가능")
             return None
 
     except Exception as e:
@@ -122,9 +123,9 @@ def process_batch_file(
     웹 업로드 파일 → Kafka → Bronze 적재
 
     Args:
-        company:   회사명 (예: wikipedia)
-        domain:    도메인명 (예: content)  ← kafka2bronze의 TENANT_NAME 규칙과 동일
-        file_path:   로컬 임시 파일 경로
+        company:   회사명 (web_users.company_name에서 조회)
+        domain:    도메인명 (사용자가 자유 입력)
+        file_path: 로컬 임시 파일 경로
 
     Returns:
         성공: {"status": "success", "sent": N, "failed": N,
@@ -152,9 +153,11 @@ def process_batch_file(
         return {"status": "error", "reason": "파일 읽기 실패 또는 지원하지 않는 형식"}
 
     # ── 4. Kafka 토픽 자동 생성 ──────────────────────────
-    tm     = TenantManager()
+    tm = TenantManager()
+    # 웹 파일 업로드는 ingestion 방식이 항상 batch이므로 "batch"로 토픽 생성
+    # Kafka consumer 구독 패턴 .*\.(batch|stream)\.raw 과 일치
     tenant = tm.register_tenant(company, domain, "batch")
-    topic  = tenant.topic_name
+    topic = tenant.topic_name
     bronze_folder = f"{tm._normalize(company)}_{tm._normalize(domain)}"
     print(f"  토픽: {topic}")
     print(f"  Bronze 폴더: {bronze_folder}")
@@ -165,7 +168,7 @@ def process_batch_file(
         return {"status": "error", "reason": "Kafka 연결 실패"}
 
     # ── 6. 행 단위 전송 ──────────────────────────────────
-    sent   = 0
+    sent = 0
     failed = 0
 
     try:
@@ -174,10 +177,10 @@ def process_batch_file(
                 try:
                     # 원본 데이터 100% 보존 + 메타데이터만 추가
                     event = row.where(pd.notna(row), None).to_dict()
-                    event["_ingest_ts"]   = datetime.utcnow().isoformat() + "Z"
+                    event["_ingest_ts"] = datetime.utcnow().isoformat() + "Z"
                     event["_source_type"] = "batch"
-                    event["_platform"]    = "datasentinel"
-                    event["_company"]     = company
+                    event["_platform"] = "datasentinel"
+                    event["_company"] = company
                     event["_domain"] = domain
 
                     producer.send(topic, value=event)
@@ -205,9 +208,9 @@ def process_batch_file(
     print(f"  완료 | 성공: {sent:,}행 | 실패: {failed}행")
 
     return {
-        "status":        "success",
-        "sent":          sent,
-        "failed":        failed,
-        "topic":         topic,
+        "status": "success",
+        "sent": sent,
+        "failed": failed,
+        "topic": topic,
         "bronze_folder": bronze_folder,
     }
