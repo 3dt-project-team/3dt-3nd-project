@@ -229,16 +229,41 @@ Return:
 
 
 def call_ai(client: OpenAI, model: str, messages: list[dict], label: str) -> dict:
+    import time
+
     print(f"  [{label}] 호출 중...")
-    response = client.chat.completions.create(
-        model=model,
-        messages=messages,
-        temperature=0,
-        max_tokens=8000,
-    )
-    raw = response.choices[0].message.content.strip()
-    usage = response.usage
-    print(f"  [{label}] 완료 | 토큰: {usage.total_tokens}")
+    for attempt in range(8):
+        try:
+            # Responses API 먼저 시도 (Phi-4 계열은 chat.completions 쿼터 없음)
+            try:
+                response = client.responses.create(
+                    model=model,
+                    input=messages,
+                    max_output_tokens=8000,
+                )
+                raw = response.output_text.strip()
+                print(f"  [{label}] 완료 (responses API)")
+            except Exception:
+                # fallback: chat completions
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=0,
+                    max_tokens=8000,
+                )
+                raw = response.choices[0].message.content.strip()
+                usage = response.usage
+                print(f"  [{label}] 완료 | 토큰: {usage.total_tokens}")
+            break
+        except Exception as e:
+            if "429" in str(e) or "RateLimit" in str(e):
+                wait = min(60 * (2**attempt), 300)
+                print(f"  [{label}] Rate limit - {wait}sec wait, retry ({attempt + 1}/8)")
+                time.sleep(wait)
+            else:
+                raise
+    else:
+        raise RuntimeError(f"[{label}] 8회 재시도 후 실패")
 
     # 마크다운 코드블록 제거
     raw = re.sub(r"^```(?:json)?\s*", "", raw)
@@ -336,6 +361,11 @@ def main():
     )
     parser.add_argument("--model", required=True, help="Azure AI Foundry 배포 이름")
     parser.add_argument(
+        "--base-url",
+        default=AZURE_BASE_URL,
+        help="Azure AI Foundry 엔드포인트 (기본: datacops)",
+    )
+    parser.add_argument(
         "--dataset",
         default="alfarisbachmid/dirty-financial-transactions-dataset",
         help="Kaggle 데이터셋 ID (기본: dirty financial transactions)",
@@ -362,8 +392,14 @@ def main():
     )
     parser.add_argument(
         "--api-key",
-        default=os.environ.get("AZURE_API_KEY") or AZURE_API_KEY,
-        help="Azure API 키",
+        default=os.environ.get("AZURE_AI_API_KEY", ""),
+        help="Azure AI Foundry API 키 (기본: AZURE_AI_API_KEY 환경변수)",
+    )
+    parser.add_argument(
+        "--max-rows",
+        type=int,
+        default=None,
+        help="프로파일링에 사용할 최대 행 수 (기본: 전체). 예: --max-rows 2000",
     )
     args = parser.parse_args()
 
@@ -372,7 +408,11 @@ def main():
     # ── 1. 데이터 로드 ───────────────────────────────────
     print(f"[1/4] Kaggle 데이터 로드 중... ({args.dataset})")
     df, table_name = load_table(args.dataset, args.table)
-    print(f"  테이블: {table_name} | {len(df):,}행 x {len(df.columns)}컬럼")
+    if args.max_rows and len(df) > args.max_rows:
+        df = df.sample(n=args.max_rows, random_state=42).reset_index(drop=True)
+        print(f"  테이블: {table_name} | {args.max_rows:,}행 샘플 x {len(df.columns)}컬럼")
+    else:
+        print(f"  테이블: {table_name} | {len(df):,}행 x {len(df.columns)}컬럼")
 
     # ── 2. 프로파일링 ────────────────────────────────────
     print("[2/4] 컬럼 프로파일링 중...")
@@ -383,7 +423,7 @@ def main():
     # ── 3. 규칙 생성 ─────────────────────────────────────
     domain = args.domain or table_name.replace(".csv", "").replace("-", "_")
     print(f"[3/4] 규칙 생성 중 (모델: {args.model} | 도메인: {domain})...")
-    client = OpenAI(api_key=args.api_key, base_url=AZURE_BASE_URL)
+    client = OpenAI(api_key=args.api_key, base_url=args.base_url, timeout=43200.0)
 
     stage1 = call_ai(
         client, args.model, build_stage1_prompt(slim_profile, domain), "Stage1 NULL전략"
@@ -416,7 +456,7 @@ def main():
 
     # ── 4. 골든셋 평가 ───────────────────────────────────
     print("[4/4] 골든셋 평가 실행...")
-    sys.path.insert(0, str(Path(__file__).parent))
+    sys.path.insert(0, str(Path(__file__).parent / "finance"))
     from evaluate_golden_set import evaluate
 
     golden_path = args.golden
