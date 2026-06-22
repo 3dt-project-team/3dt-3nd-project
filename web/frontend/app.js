@@ -19,6 +19,7 @@ function checkAuthentication() {
     return true;
 }
 
+// 🎯 조치 완료: 로그인한 진짜 회사명(asung 등)을 찾아 화면에 실시간으로 매핑 및 잠금하는 엔진
 function initAuthenticatedUI() {
     const email = localStorage.getItem('email');
     const company = localStorage.getItem('company_name');
@@ -36,10 +37,12 @@ function initAuthenticatedUI() {
             `;
         }
 
-        // company는 표시 전용(DB에서 가져옴), domain은 자유 입력
+        // 🎯 고정 텍스트를 파괴하고 로그인 유저의 회사명을 인입한 뒤 락(Lock)을 겁니다.
         const companyInput = document.getElementById('company');
         if (companyInput) {
             companyInput.value = company;
+            companyInput.disabled = true;
+            companyInput.classList.add('opacity-60', 'cursor-not-allowed');
         }
     }
 }
@@ -119,7 +122,6 @@ startUploadBtn.addEventListener('click', () => {
 function uploadFileToServer(file) {
     const email = localStorage.getItem('email');
     const domain = document.getElementById('domain').value.trim();
-    const source = document.getElementById('source').value; 
 
     if (!email) {
         alert("로그인이 필요합니다.");
@@ -134,10 +136,10 @@ function uploadFileToServer(file) {
     startUploadBtn.disabled = true;
     statusDiv.innerHTML = `<span class="text-indigo-400 animate-pulse">⏳ [${file.name}] 카프카 브론즈 레이어로 적재 중...</span>`;
 
+    // 🎯 조치 완료: 동료분의 변경사항에 맞춰 source 데이터를 완전히 탈락시키고 정합성을 맞춤
     const formData = new FormData();
     formData.append("email", email);
     formData.append("domain", domain);
-    formData.append("source", source); 
     formData.append("file", file);
 
     fetch("/api/upload", {
