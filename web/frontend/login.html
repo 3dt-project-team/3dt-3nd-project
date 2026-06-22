@@ -14,11 +14,11 @@
         <div class="space-y-4 text-left">
             <div>
                 <label class="text-xs font-bold text-slate-400 block mb-1">Email Address</label>
-                <input type="text" id="email" value="admin@transport-corp.com" class="w-full p-3 bg-slate-950 border border-slate-700 rounded-lg text-white font-medium focus:outline-indigo-500">
+                <input type="text" id="email" placeholder="이메일" class="w-full p-3 bg-slate-950 border border-slate-700 rounded-lg text-white font-medium focus:outline-indigo-500">
             </div>
             <div>
                 <label class="text-xs font-bold text-slate-400 block mb-1">Password</label>
-                <input type="password" id="password" value="1234" class="w-full p-3 bg-slate-950 border border-slate-700 rounded-lg text-white font-medium focus:outline-indigo-500">
+                <input type="password" id="password" placeholder="비밀번호" class="w-full p-3 bg-slate-950 border border-slate-700 rounded-lg text-white font-medium focus:outline-indigo-500">
             </div>
         </div>
 
@@ -53,11 +53,12 @@
                     localStorage.setItem('email', emailInput);
                     localStorage.setItem('domain_name', result.user_info.domain_name);
                     localStorage.setItem('company_name', result.user_info.company_name);
-                    // 🎯 조치 완수: app.js의 checkAuthentication() 방어벽을 통과시키기 위해 유저 정보 탑재
-                    localStorage.setItem('user_info', JSON.stringify(result.user_info)); 
                     
-                    // 🎯 조치 완수: 로그인 직후 대시보드가 아닌 '데이터 유입 화면'으로 목적지 변경!
-                    window.location.href = 'index.html'; 
+                    // app.js 가드 통과용 구조 매핑
+                    localStorage.setItem('user_info', JSON.stringify(result.user_info));
+                    
+                    // 🎯 조치 완료: 로그인 즉시 파일 업로드 메인 유입관(index.html)으로 정밀 안전 유도
+                    window.location.href = 'index.html';
                 } else {
                     errorMsg.innerText = "⚠️ " + (result.detail || "로그인 정보가 일치하지 않습니다.");
                     errorMsg.classList.remove('hidden');
