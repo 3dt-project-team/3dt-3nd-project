@@ -1,0 +1,331 @@
+{
+  "suite_name": "ec_online_retail_quality_suite",
+  "domain": "ec_online_retail",
+  "version": "1.0",
+  "generated_at": "2026-06-21T15:54:21.936968Z",
+  "model": "gpt-4.1-mini",
+  "dataset": "mashlyn/online-retail-ii-uci",
+  "table": "online_retail_II.csv",
+  "null_strategies": {
+    "Invoice": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Numeric column with low null rate and normal distribution (std < mean)"
+    },
+    "StockCode": {
+      "strategy": "fill_median",
+      "default_value": null,
+      "reason": "Numeric column with moderate null rate and skewed distribution (std > mean)"
+    },
+    "Description": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column with low null rate (<0.1), fill with mode"
+    },
+    "Quantity": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Numeric column with no nulls, normal distribution (std < mean)"
+    },
+    "InvoiceDate": {
+      "strategy": "fill_forward",
+      "default_value": null,
+      "reason": "Timestamp column, fill forward preferred"
+    },
+    "Price": {
+      "strategy": "fill_median",
+      "default_value": null,
+      "reason": "Numeric column with skewed distribution (std > mean)"
+    },
+    "Customer ID": {
+      "strategy": "allow",
+      "default_value": null,
+      "reason": "High null rate > 0.8 rule does not apply but null rate is 0.228, so allow nulls"
+    },
+    "Country": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column with no nulls, fill with mode if needed"
+    }
+  },
+  "expectations": [
+    {
+      "rule_id": "RULE_EC_O_001",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Invoice",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Invoice column has a low null rate but must not contain nulls for transaction integrity."
+    },
+    {
+      "rule_id": "RULE_EC_O_002",
+      "expectation_type": "expect_column_values_to_be_unique",
+      "column": "Invoice",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Invoice numbers must be unique to identify each transaction."
+    },
+    {
+      "rule_id": "RULE_EC_O_003",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "StockCode",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "StockCode is essential for product identification and must not be null."
+    },
+    {
+      "rule_id": "RULE_EC_O_004",
+      "expectation_type": "expect_column_values_to_be_unique",
+      "column": "StockCode",
+      "kwargs": {},
+      "severity": "warning",
+      "enabled": true,
+      "reason": "StockCode has high unique count; uniqueness is recommended but not critical."
+    },
+    {
+      "rule_id": "RULE_EC_O_005",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Description",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Description should not be null to provide product details."
+    },
+    {
+      "rule_id": "RULE_EC_O_006",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Quantity",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Quantity must not be null to ensure valid order data."
+    },
+    {
+      "rule_id": "RULE_EC_O_007",
+      "expectation_type": "expect_column_min_to_be_between",
+      "column": "Quantity",
+      "kwargs": {
+        "min_value": 0
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Quantity minimum must be greater than 0 to avoid invalid or negative quantities."
+    },
+    {
+      "rule_id": "RULE_EC_O_008",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "InvoiceDate",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "InvoiceDate must not be null to track transaction timing."
+    },
+    {
+      "rule_id": "RULE_EC_O_009",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Price",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Price must not be null to ensure valid transaction amounts."
+    },
+    {
+      "rule_id": "RULE_EC_O_010",
+      "expectation_type": "expect_column_min_to_be_between",
+      "column": "Price",
+      "kwargs": {
+        "min_value": 0
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Price minimum must be greater than 0 to avoid invalid or negative prices."
+    },
+    {
+      "rule_id": "RULE_EC_O_011",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Customer ID",
+      "kwargs": {},
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Customer ID has a high null rate but should ideally not be null for customer tracking."
+    },
+    {
+      "rule_id": "RULE_EC_O_012",
+      "expectation_type": "expect_column_values_to_be_unique",
+      "column": "Customer ID",
+      "kwargs": {},
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Customer ID has high unique count; uniqueness is recommended but not critical."
+    },
+    {
+      "rule_id": "RULE_EC_O_013",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Country",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Country must not be null to identify transaction location."
+    },
+    {
+      "rule_id": "RULE_EC_O_014",
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "column": "Country",
+      "kwargs": {
+        "value_set": [
+          "United Kingdom",
+          "France",
+          "Germany",
+          "Netherlands",
+          "EIRE",
+          "Spain",
+          "Switzerland",
+          "Portugal",
+          "Australia",
+          "Norway",
+          "Channel Islands",
+          "Cyprus",
+          "Finland",
+          "Austria",
+          "Denmark",
+          "Belgium",
+          "Japan",
+          "USA",
+          "Poland",
+          "Malta",
+          "Italy",
+          "Greece",
+          "Iceland",
+          "Lithuania",
+          "Brazil",
+          "Canada",
+          "Bahrain",
+          "Unspecified",
+          "Singapore",
+          "Israel",
+          "United Arab Emirates",
+          "European Community",
+          "Lebanon",
+          "Hong Kong",
+          "Sweden",
+          "Czech Republic",
+          "RSA",
+          "Thailand",
+          "Korea",
+          "Lithuania",
+          "Malawi",
+          "West Indies",
+          "Lebanon"
+        ]
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Country values should be from a standardized set of known countries in the dataset."
+    }
+  ],
+  "anomaly_rules": [
+    {
+      "rule_id": "RULE_EC_O_015",
+      "name": "Invoice zscore anomaly detection",
+      "columns": [
+        "Invoice"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Invoice is numeric with std > 0; zscore detects outliers."
+    },
+    {
+      "rule_id": "RULE_EC_O_016",
+      "name": "StockCode zscore anomaly detection",
+      "columns": [
+        "StockCode"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "StockCode is numeric with std > 0; zscore detects outliers."
+    },
+    {
+      "rule_id": "RULE_EC_O_017",
+      "name": "StockCode iqr anomaly detection",
+      "columns": [
+        "StockCode"
+      ],
+      "method": "iqr",
+      "threshold": 1.5,
+      "severity": "warning",
+      "reason": "StockCode is skewed numeric; iqr detects outliers."
+    },
+    {
+      "rule_id": "RULE_EC_O_018",
+      "name": "Quantity zscore anomaly detection",
+      "columns": [
+        "Quantity"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Quantity is numeric with std > 0; zscore detects outliers."
+    },
+    {
+      "rule_id": "RULE_EC_O_019",
+      "name": "Quantity iqr anomaly detection",
+      "columns": [
+        "Quantity"
+      ],
+      "method": "iqr",
+      "threshold": 1.5,
+      "severity": "warning",
+      "reason": "Quantity is skewed numeric; iqr detects outliers."
+    },
+    {
+      "rule_id": "RULE_EC_O_020",
+      "name": "Price zscore anomaly detection",
+      "columns": [
+        "Price"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Price is numeric with std > 0; zscore detects outliers."
+    },
+    {
+      "rule_id": "RULE_EC_O_021",
+      "name": "Price iqr anomaly detection",
+      "columns": [
+        "Price"
+      ],
+      "method": "iqr",
+      "threshold": 1.5,
+      "severity": "warning",
+      "reason": "Price is skewed numeric; iqr detects outliers."
+    },
+    {
+      "rule_id": "RULE_EC_O_022",
+      "name": "Customer ID zscore anomaly detection",
+      "columns": [
+        "Customer ID"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Customer ID is numeric with std > 0; zscore detects outliers."
+    },
+    {
+      "rule_id": "RULE_EC_O_023",
+      "name": "Country frequency anomaly detection",
+      "columns": [
+        "Country"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Country is categorical; frequency detects unexpected rare values."
+    }
+  ],
+  "text_quality_columns": []
+}
