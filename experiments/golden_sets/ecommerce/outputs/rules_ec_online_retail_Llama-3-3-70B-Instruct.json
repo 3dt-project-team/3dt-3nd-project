@@ -1,0 +1,276 @@
+{
+  "suite_name": "ec_online_retail_quality_suite",
+  "domain": "ec_online_retail",
+  "version": "1.0",
+  "generated_at": "2026-06-21T15:42:29.328182Z",
+  "model": "Llama-3.3-70B-Instruct",
+  "dataset": "mashlyn/online-retail-ii-uci",
+  "table": "online_retail_II.csv",
+  "null_strategies": {
+    "Invoice": {
+      "strategy": "drop",
+      "default_value": null,
+      "reason": "Identifier column"
+    },
+    "StockCode": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column with null_rate > 0.1"
+    },
+    "Description": {
+      "strategy": "fill_default",
+      "default_value": "",
+      "reason": "Free-text column"
+    },
+    "Quantity": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column"
+    },
+    "InvoiceDate": {
+      "strategy": "fill_forward",
+      "default_value": null,
+      "reason": "Timestamp column"
+    },
+    "Price": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column"
+    },
+    "Customer ID": {
+      "strategy": "drop",
+      "default_value": null,
+      "reason": "Identifier column"
+    },
+    "Country": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column"
+    }
+  },
+  "expectations": [
+    {
+      "rule_id": "RULE_EC_O_001",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Invoice",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Invoice column should not have null values"
+    },
+    {
+      "rule_id": "RULE_EC_O_002",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "StockCode",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "StockCode column should not have null values"
+    },
+    {
+      "rule_id": "RULE_EC_O_003",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Description",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Description column should not have null values"
+    },
+    {
+      "rule_id": "RULE_EC_O_004",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Quantity",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Quantity column should not have null values"
+    },
+    {
+      "rule_id": "RULE_EC_O_005",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "InvoiceDate",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "InvoiceDate column should not have null values"
+    },
+    {
+      "rule_id": "RULE_EC_O_006",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Price",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Price column should not have null values"
+    },
+    {
+      "rule_id": "RULE_EC_O_007",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Customer ID",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Customer ID column should not have null values"
+    },
+    {
+      "rule_id": "RULE_EC_O_008",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Country",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Country column should not have null values"
+    },
+    {
+      "rule_id": "RULE_EC_O_009",
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "column": "Country",
+      "kwargs": {
+        "value_set": [
+          "United Kingdom",
+          "Other Countries"
+        ]
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Country column should have standardized values"
+    }
+  ],
+  "anomaly_rules": [
+    {
+      "rule_id": "RULE_EC_O_010",
+      "name": "Invoice z-score anomaly",
+      "columns": [
+        "Invoice"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Invoice column has a high standard deviation"
+    },
+    {
+      "rule_id": "RULE_EC_O_011",
+      "name": "StockCode z-score anomaly",
+      "columns": [
+        "StockCode"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "StockCode column has a high standard deviation"
+    },
+    {
+      "rule_id": "RULE_EC_O_012",
+      "name": "Quantity z-score anomaly",
+      "columns": [
+        "Quantity"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Quantity column has a high standard deviation"
+    },
+    {
+      "rule_id": "RULE_EC_O_013",
+      "name": "Price z-score anomaly",
+      "columns": [
+        "Price"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Price column has a high standard deviation"
+    },
+    {
+      "rule_id": "RULE_EC_O_014",
+      "name": "Customer ID z-score anomaly",
+      "columns": [
+        "Customer ID"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Customer ID column has a high standard deviation"
+    },
+    {
+      "rule_id": "RULE_EC_O_015",
+      "name": "Invoice iqr anomaly",
+      "columns": [
+        "Invoice"
+      ],
+      "method": "iqr",
+      "threshold": 1.5,
+      "severity": "warning",
+      "reason": "Invoice column is skewed"
+    },
+    {
+      "rule_id": "RULE_EC_O_016",
+      "name": "StockCode iqr anomaly",
+      "columns": [
+        "StockCode"
+      ],
+      "method": "iqr",
+      "threshold": 1.5,
+      "severity": "warning",
+      "reason": "StockCode column is skewed"
+    },
+    {
+      "rule_id": "RULE_EC_O_017",
+      "name": "Quantity iqr anomaly",
+      "columns": [
+        "Quantity"
+      ],
+      "method": "iqr",
+      "threshold": 1.5,
+      "severity": "warning",
+      "reason": "Quantity column is skewed"
+    },
+    {
+      "rule_id": "RULE_EC_O_018",
+      "name": "Price iqr anomaly",
+      "columns": [
+        "Price"
+      ],
+      "method": "iqr",
+      "threshold": 1.5,
+      "severity": "warning",
+      "reason": "Price column is skewed"
+    },
+    {
+      "rule_id": "RULE_EC_O_019",
+      "name": "Customer ID iqr anomaly",
+      "columns": [
+        "Customer ID"
+      ],
+      "method": "iqr",
+      "threshold": 1.5,
+      "severity": "warning",
+      "reason": "Customer ID column is skewed"
+    },
+    {
+      "rule_id": "RULE_EC_O_020",
+      "name": "Description frequency anomaly",
+      "columns": [
+        "Description"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Description column has a high frequency of certain values"
+    },
+    {
+      "rule_id": "RULE_EC_O_021",
+      "name": "Country frequency anomaly",
+      "columns": [
+        "Country"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Country column has a high frequency of certain values"
+    }
+  ],
+  "text_quality_columns": [
+    "Description"
+  ]
+}

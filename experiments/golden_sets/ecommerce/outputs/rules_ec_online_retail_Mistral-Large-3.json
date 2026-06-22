@@ -1,0 +1,337 @@
+{
+  "suite_name": "ec_online_retail_quality_suite",
+  "domain": "ec_online_retail",
+  "version": "1.0",
+  "generated_at": "2026-06-22T02:16:45.432262Z",
+  "model": "Mistral-Large-3",
+  "dataset": "mashlyn/online-retail-ii-uci",
+  "table": "online_retail_II.csv",
+  "null_strategies": {
+    "Invoice": {
+      "strategy": "drop",
+      "default_value": null,
+      "reason": "Identifier column (contains 'Invoice' in name)"
+    },
+    "StockCode": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column with null_rate > 0.1"
+    },
+    "Description": {
+      "strategy": "fill_default",
+      "default_value": "",
+      "reason": "Free-text column"
+    },
+    "Quantity": {
+      "strategy": "fill_median",
+      "default_value": null,
+      "reason": "Skewed numeric column (high std vs mean)"
+    },
+    "InvoiceDate": {
+      "strategy": "drop",
+      "default_value": null,
+      "reason": "Timestamp column with no nulls, but 'drop' is preferred over 'fill_forward' for identifiers"
+    },
+    "Price": {
+      "strategy": "fill_median",
+      "default_value": null,
+      "reason": "Skewed numeric column (high std vs mean)"
+    },
+    "Customer ID": {
+      "strategy": "drop",
+      "default_value": null,
+      "reason": "Identifier column (contains 'ID' in name)"
+    },
+    "Country": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column with no nulls, but 'fill_mode' is default for categorical"
+    }
+  },
+  "expectations": [
+    {
+      "rule_id": "RULE_EC_O_001",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "InvoiceDate",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "InvoiceDate is a critical timestamp field and should never be null."
+    },
+    {
+      "rule_id": "RULE_EC_O_002",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Quantity",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Quantity is a critical numeric field and should never be null."
+    },
+    {
+      "rule_id": "RULE_EC_O_003",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Price",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Price is a critical numeric field and should never be null."
+    },
+    {
+      "rule_id": "RULE_EC_O_004",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Country",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Country is a critical categorical field and should never be null."
+    },
+    {
+      "rule_id": "RULE_EC_O_005",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "Quantity",
+      "kwargs": {
+        "min_value": 0
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Quantity should be a non-negative value."
+    },
+    {
+      "rule_id": "RULE_EC_O_006",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "Price",
+      "kwargs": {
+        "min_value": 0
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Price should be a non-negative value."
+    },
+    {
+      "rule_id": "RULE_EC_O_007",
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "column": "Country",
+      "kwargs": {
+        "value_set": [
+          "United Kingdom",
+          "France",
+          "Germany",
+          "USA",
+          "Australia",
+          "Netherlands",
+          "Sweden",
+          "Switzerland",
+          "Spain",
+          "Japan",
+          "Belgium",
+          "Norway",
+          "Portugal",
+          "Italy",
+          "Finland",
+          "Austria",
+          "Denmark",
+          "Canada",
+          "Ireland",
+          "Channel Islands",
+          "Israel",
+          "Greece",
+          "Hong Kong",
+          "Singapore",
+          "Lebanon",
+          "United Arab Emirates",
+          "Saudi Arabia",
+          "Czech Republic",
+          "Poland",
+          "Iceland",
+          "Malta",
+          "Brazil",
+          "European Community",
+          "Cyprus",
+          "Unspecified"
+        ]
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Country should be one of the predefined set of allowed values."
+    },
+    {
+      "rule_id": "RULE_EC_O_008",
+      "expectation_type": "expect_column_min_to_be_between",
+      "column": "Quantity",
+      "kwargs": {
+        "min_value": 0
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Minimum value of Quantity should be greater than 0."
+    },
+    {
+      "rule_id": "RULE_EC_O_009",
+      "expectation_type": "expect_column_min_to_be_between",
+      "column": "Price",
+      "kwargs": {
+        "min_value": 0
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Minimum value of Price should be greater than 0."
+    },
+    {
+      "rule_id": "RULE_EC_O_010",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Invoice",
+      "kwargs": {},
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Invoice should not be null, but a small null rate is acceptable."
+    },
+    {
+      "rule_id": "RULE_EC_O_011",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "StockCode",
+      "kwargs": {},
+      "severity": "warning",
+      "enabled": true,
+      "reason": "StockCode should not be null, but a moderate null rate is acceptable."
+    },
+    {
+      "rule_id": "RULE_EC_O_012",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Description",
+      "kwargs": {},
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Description should not be null, but a very small null rate is acceptable."
+    },
+    {
+      "rule_id": "RULE_EC_O_013",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Customer ID",
+      "kwargs": {},
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Customer ID should not be null, but a significant null rate is acceptable for analysis."
+    },
+    {
+      "rule_id": "RULE_EC_O_014",
+      "expectation_type": "expect_column_values_to_be_unique",
+      "column": "Invoice",
+      "kwargs": {},
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Invoice values should ideally be unique, but duplicates may occur due to data entry."
+    }
+  ],
+  "anomaly_rules": [
+    {
+      "rule_id": "RULE_EC_O_015",
+      "name": "Invoice_zscore_anomaly",
+      "columns": [
+        "Invoice"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect anomalies in Invoice using z-score for numeric values with standard deviation > 0."
+    },
+    {
+      "rule_id": "RULE_EC_O_016",
+      "name": "StockCode_zscore_anomaly",
+      "columns": [
+        "StockCode"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect anomalies in StockCode using z-score for numeric values with standard deviation > 0."
+    },
+    {
+      "rule_id": "RULE_EC_O_017",
+      "name": "Quantity_zscore_anomaly",
+      "columns": [
+        "Quantity"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect anomalies in Quantity using z-score for numeric values with standard deviation > 0."
+    },
+    {
+      "rule_id": "RULE_EC_O_018",
+      "name": "Quantity_iqr_anomaly",
+      "columns": [
+        "Quantity"
+      ],
+      "method": "iqr",
+      "threshold": 1.5,
+      "severity": "warning",
+      "reason": "Detect anomalies in Quantity using IQR for skewed numeric values."
+    },
+    {
+      "rule_id": "RULE_EC_O_019",
+      "name": "Price_zscore_anomaly",
+      "columns": [
+        "Price"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect anomalies in Price using z-score for numeric values with standard deviation > 0."
+    },
+    {
+      "rule_id": "RULE_EC_O_020",
+      "name": "Price_iqr_anomaly",
+      "columns": [
+        "Price"
+      ],
+      "method": "iqr",
+      "threshold": 1.5,
+      "severity": "warning",
+      "reason": "Detect anomalies in Price using IQR for skewed numeric values."
+    },
+    {
+      "rule_id": "RULE_EC_O_021",
+      "name": "Customer_ID_zscore_anomaly",
+      "columns": [
+        "Customer ID"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect anomalies in Customer ID using z-score for numeric values with standard deviation > 0."
+    },
+    {
+      "rule_id": "RULE_EC_O_022",
+      "name": "Description_frequency_anomaly",
+      "columns": [
+        "Description"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect anomalies in Description using frequency analysis for categorical values."
+    },
+    {
+      "rule_id": "RULE_EC_O_023",
+      "name": "Country_frequency_anomaly",
+      "columns": [
+        "Country"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect anomalies in Country using frequency analysis for categorical values."
+    }
+  ],
+  "text_quality_columns": [
+    {
+      "column": "Description",
+      "checks": [
+        "profanity",
+        "spam",
+        "hate_speech",
+        "pii"
+      ]
+    }
+  ]
+}
