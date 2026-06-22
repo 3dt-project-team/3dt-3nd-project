@@ -7,6 +7,7 @@ from typing import List, Optional
 
 import pandas as pd
 import psycopg2
+
 # Azure Key Vault 부품
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
@@ -14,8 +15,8 @@ from azure.storage.blob import BlobServiceClient
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
-from pydantic import BaseModel
 from psycopg2.extras import RealDictCursor
+from pydantic import BaseModel
 
 app = FastAPI(title="DataCops 품질 관제 플랫폼 API")
 
@@ -209,9 +210,10 @@ FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 
 # ── 🛠️ 격리 및 마스터 데이터 관리를 위한 추가 Pydantic 모델 & 헬퍼 함수 ──
 
+
 class QuarantineActionRequest(BaseModel):
-    row_ids: Optional[List[str]] = None      
-    reason: Optional[str] = "사유 기입 누락"   
+    row_ids: Optional[List[str]] = None
+    reason: Optional[str] = "사유 기입 누락"
 
 
 def _log_quarantine_action(domain: str, row_ids: list, action: str, reason: str):
@@ -290,7 +292,6 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
-# 💡 조치 완료: 가입 DTO 모델에서 domain_name 항목 제거
 class RegisterRequest(BaseModel):
     email: str
     password: str
@@ -311,7 +312,8 @@ def login_user(login_info: LoginRequest):
         cursor.close()
         conn.close()
 
-        if not user or login_info.password != "1234":
+        # 🎯 조치 완료: 테스트 문자열 "1234" 검증 로직을 도려내고, DB에 저장된 실제 password_hash와 일치하는지 정밀 검사합니다.
+        if not user or login_info.password != user["password_hash"]:
             raise HTTPException(status_code=401, detail="이메일 또는 비밀번호가 올바르지 않습니다.")
 
         return {
@@ -492,7 +494,7 @@ def get_rules(email: str = Query(...), domain: str = Query(...)):
 class ToggleRequest(BaseModel):
     email: str
     domain: str
-    rule_type: str  
+    rule_type: str
     rule_index: int
     enabled: bool
 
@@ -563,15 +565,25 @@ def api_delete_quarantine(domain: str, req: QuarantineActionRequest):
 @app.post("/api/quarantine/{domain}/approve")
 def api_approve_to_master(domain: str, req: QuarantineActionRequest):
     META_COLS = [
-        "_quarantine_reason", "_ingest_ts", "_source_type", "_platform",
-        "_company", "_domain", "_row_hash", "_quarantine_ts",
-        "_processed_at", "_run_id", "_epoch_id"
+        "__quarantine_reason",
+        "_ingest_ts",
+        "_source_type",
+        "_platform",
+        "_company",
+        "_domain",
+        "_row_hash",
+        "_quarantine_ts",
+        "_processed_at",
+        "_run_id",
+        "_epoch_id",
     ]
 
     try:
         df_q = _get_blob_df("quarantine", f"{domain}/")
         if df_q.empty:
-            raise HTTPException(status_code=404, detail="처리할 대상 격리 데이터 파티션이 비어있습니다.")
+            raise HTTPException(
+                status_code=404, detail="처리할 대상 격리 데이터 파티션이 비어있습니다."
+            )
 
         df_approved = df_q[df_q["_row_hash"].isin(req.row_ids)] if req.row_ids else df_q
 
@@ -586,7 +598,11 @@ def api_approve_to_master(domain: str, req: QuarantineActionRequest):
         except Exception:
             df_silver = pd.DataFrame()
 
-        df_master = pd.concat([df_silver, df_approved], ignore_index=True) if not df_silver.empty else df_approved
+        df_master = (
+            pd.concat([df_silver, df_approved], ignore_index=True)
+            if not df_silver.empty
+            else df_approved
+        )
         df_master["_merged_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -604,7 +620,10 @@ def api_approve_to_master(domain: str, req: QuarantineActionRequest):
             for blob in blob_list:
                 container_client.delete_blob(blob.name)
 
-        return {"status": "success", "message": f"[{domain}] 격리 데이터 마스터 컨테이너 정상 갱신 및 결합 승인 완료"}
+        return {
+            "status": "success",
+            "message": f"[{domain}] 격리 데이터 마스터 컨테이너 정상 갱신 및 결합 승인 완료",
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"마스터 강제 병합 및 업데이트 실패: {str(e)}")
 
@@ -620,7 +639,7 @@ def download_master_csv(domain: str):
         if df_master.empty:
             raise HTTPException(
                 status_code=404,
-                detail=f"[{domain}] 마스터 컨테이너 영역에 최종 정형 보고서가 존재하지 않습니다."
+                detail=f"[{domain}] 마스터 컨테이너 영역에 최종 정형 보고서가 존재하지 않습니다.",
             )
 
         csv_buffer = io.StringIO()
@@ -630,7 +649,9 @@ def download_master_csv(domain: str):
         return StreamingResponse(
             io.BytesIO(csv_buffer.getvalue().encode("utf-8-sig")),
             media_type="text/csv",
-            headers={"Content-Disposition": f"attachment; filename={domain}_final_master_report.csv"}
+            headers={
+                "Content-Disposition": f"attachment; filename={domain}_final_master_report.csv"
+            },
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"다운로드 파일 연산 실패: {str(e)}")
@@ -641,14 +662,64 @@ def download_master_csv(domain: str):
 
 @app.post("/api/upload")
 async def upload_batch_file(
-    company: str = Form(...), 
-    domain: str = Form(...), 
-    source: str = Form(...),  
-    file: UploadFile = File(...)
+    email: str = Form(...), domain: str = Form(...), file: UploadFile = File(...)
 ):
     filename = file.filename
     if not filename.lower().endswith((".csv", ".xlsx", ".xls")):
         raise HTTPException(status_code=400, detail="CSV 또는 Excel 파일만 업로드 가능합니다.")
+
+    try:
+        conn = psycopg2.connect(**DB_CONFIG, cursor_factory=RealDictCursor)
+        cur = conn.cursor()
+        cur.execute("SELECT user_id, company_name FROM web_users WHERE email = %s", (email,))
+        user = cur.fetchone()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"사용자 조회 실패: {str(e)}")
+
+    if not user:
+        raise HTTPException(status_code=401, detail="등록되지 않은 이메일입니다.")
+
+    user_id = user["user_id"]
+    company_name = user["company_name"]
+
+    import re
+
+    def _normalize(s: str) -> str:
+        s = s.lower().strip()
+        s = re.sub(r"[^a-z0-9_]", "_", s)
+        s = re.sub(r"_+", "_", s).strip("_")
+        return s[:50]
+
+    bronze_folder = f"{_normalize(company_name)}_{_normalize(domain)}"
+
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        cur = conn.cursor()
+        
+        cur.execute(
+            "SELECT 1 FROM data_sources WHERE user_id = %s AND bronze_folder = %s",
+            (user_id, bronze_folder),
+        )
+        if not cur.fetchone():
+            cur.execute(
+                """
+                INSERT INTO data_sources (user_id, bronze_folder, source_name, status)
+                VALUES (%s, %s, %s, 'active')
+                """,
+                (user_id, bronze_folder, bronze_folder),
+            )
+            
+        cur.execute(
+            "UPDATE web_users SET domain_name = %s WHERE user_id = %s",
+            (domain, user_id)
+        )
+        
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"도메인 메타 정보 동기화 실패: {str(e)}")
 
     temp_file_path = os.path.join(UPLOAD_DIR, filename)
     try:
@@ -658,7 +729,7 @@ async def upload_batch_file(
         raise HTTPException(status_code=500, detail=f"임시 파일 저장 실패: {str(e)}")
 
     try:
-        result = process_batch_file(company=company, domain=domain, source=source, file_path=temp_file_path)
+        result = process_batch_file(company=company_name, domain=domain, file_path=temp_file_path)
 
         if result.get("status") == "success":
             return {
@@ -688,10 +759,9 @@ def register_user(req: RegisterRequest):
         if cur.fetchone():
             raise HTTPException(status_code=400, detail="이미 가입된 이메일입니다.")
         
-        # 💡 조치 완료: domain_name을 제외하고 회사 정보 위주로만 계정을 우선 생성
         insert_user_query = """
             INSERT INTO web_users (email, password_hash, company_name, domain_name)
-            VALUES (%s, %s, %s, NULL) RETURNING user_id;
+            VALUES (%s, %s, %s, 'default') RETURNING user_id;
         """
         cur.execute(insert_user_query, (req.email, req.password, req.company_name))
         
@@ -715,7 +785,6 @@ def register_user(req: RegisterRequest):
 # ── 🌐 프론트엔드 정적 페이지 서빙 영역 ────────────────────────
 
 
-# 🎯 조치 완료: 정적 페이지 라우팅에 /index.html 및 /index 멀티 바인딩 확장 탑재
 @app.get("/")
 @app.get("/index.html")
 @app.get("/index")

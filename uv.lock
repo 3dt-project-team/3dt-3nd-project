@@ -30,6 +30,7 @@ dependencies = [
     { name = "pyarrow" },
     { name = "pydantic" },
     { name = "python-dotenv" },
+    { name = "python-multipart" },
     { name = "redis" },
     { name = "sqlalchemy" },
     { name = "sseclient-py" },
@@ -81,6 +82,7 @@ requires-dist = [
     { name = "pyarrow", specifier = ">=18.0.0" },
     { name = "pydantic", specifier = ">=2.10.0" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
+    { name = "python-multipart", specifier = ">=0.0.32" },
     { name = "redis", specifier = ">=5.2.0" },
     { name = "scikit-learn", marker = "extra == 'ml'", specifier = ">=1.6.0" },
     { name = "sqlalchemy", specifier = ">=2.0.0" },
@@ -2281,6 +2283,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/fa/6d/4384c2723adad93a3d6de4297e6d9c8b93be7f778a407f34f6ee0b2bea3e/python_engineio-4.13.2.tar.gz", hash = "sha256:a7732e99cfb7db6ed1aee31f18d7f73bbae086a92f31dee019bc646155d9684e", size = 79639, upload-time = "2026-05-21T21:45:07.578Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b7/28/180bfc5c95e83d40cb2abce512684ccad44e4819ec899fc36cb404a19061/python_engineio-4.13.2-py3-none-any.whl", hash = "sha256:8c101cd170e400dc4e970cd523325cde22df8fc25140953f379327055d701a6b", size = 59993, upload-time = "2026-05-21T21:45:06.162Z" },
+]
+
+[[package]]
+name = "python-multipart"
+version = "0.0.32"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/5b/42/55c32bb9b12693c092ad250a0e82edb5b31ddeda6eb772de5f308b3804ad/python_multipart-0.0.32.tar.gz", hash = "sha256:be54b7f3fa167bb83e4fcd936b887b708f4e57fe75911c02aebf53efaf8d938e", size = 46881, upload-time = "2026-06-04T16:18:58.647Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e1/04/e8135ebd1ad02c56ec633277529b2602ff99ff634be76cdba5744cf554fd/python_multipart-0.0.32-py3-none-any.whl", hash = "sha256:ff6d3f776f16878c894e52e107296ffc890e913c611b1a4ec6c44e2821fe2e23", size = 30042, upload-time = "2026-06-04T16:18:57.319Z" },
 ]
 
 [[package]]

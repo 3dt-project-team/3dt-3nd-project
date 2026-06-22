@@ -9,7 +9,6 @@ const startUploadBtn = document.getElementById('start-upload-btn');
 // 유저가 선택한 파일을 임시 보관할 변수 (대기실)
 let selectedFile = null;
 
-// 🚨 [진입 통제 자물쇠] 로그인 세션(email)이 없으면 파일 업로드 차단
 function checkAuthentication() {
     const email = localStorage.getItem('email');
     if (!email) {
@@ -20,15 +19,13 @@ function checkAuthentication() {
     return true;
 }
 
-// 🎯 [요구사항 1] 로그인 상태에 따라 홈 화면 상단 버튼 및 입력 폼 완벽 제어 로그아웃 구현
+// 🎯 조치 완료: 로그인한 진짜 회사명(asung 등)을 찾아 화면에 실시간으로 매핑 및 잠금하는 엔진
 function initAuthenticatedUI() {
     const email = localStorage.getItem('email');
     const company = localStorage.getItem('company_name');
     const navAuthSection = document.getElementById('nav-auth-section');
 
-    // 사용자가 로그인한 상태라면
     if (email && company) {
-        // 1. 로그인, 회원가입 버튼을 완전히 지우고 [관제 대시보드], [로그아웃] 버튼만 노출
         if (navAuthSection) {
             navAuthSection.innerHTML = `
                 <a href="dashboard.html" class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold px-4 py-2 rounded-lg transition-all shadow-md shadow-indigo-600/20 cursor-pointer flex items-center gap-1">
@@ -40,23 +37,16 @@ function initAuthenticatedUI() {
             `;
         }
 
-        // 2. 회사명은 내 부서로 락(Lock)을 걸고, 도메인명은 수동 편집하도록 활성화
+        // 🎯 고정 텍스트를 파괴하고 로그인 유저의 회사명을 인입한 뒤 락(Lock)을 겁니다.
         const companyInput = document.getElementById('company');
-        const domainInput = document.getElementById('domain');
-        
         if (companyInput) {
             companyInput.value = company;
-            companyInput.disabled = true; 
+            companyInput.disabled = true;
             companyInput.classList.add('opacity-60', 'cursor-not-allowed');
-        }
-        if (domainInput) {
-            domainInput.disabled = false;
-            domainInput.classList.remove('opacity-60', 'cursor-not-allowed');
         }
     }
 }
 
-// 🎯 [요구사항 2] 관제 센터 입장하기 버튼 클릭 시 비로그인 유저 진입 통제 차단막
 window.handleEnterConsole = function() {
     const email = localStorage.getItem('email');
     if (!email) {
@@ -67,74 +57,12 @@ window.handleEnterConsole = function() {
     }
 }
 
-// 🎯 로그아웃 기능 동작 정의
 window.handleLogout = function() {
-    localStorage.clear(); // 세션 삭제
+    localStorage.clear();
     alert("안전하게 로그아웃되었습니다.");
-    window.location.href = 'index.html'; // 홈 화면 갱신 복귀
-}
-
-// 도큐먼트 로드 완료 시 UI 동적 바인딩 가동
-document.addEventListener('DOMContentLoaded', initAuthenticatedUI);
-
-// 🚨 [진입 통제 자물쇠] 로그인 세션(localStorage 등)이 없으면 파일 업로드 차단
-function checkAuthentication() {
-    const userInfo = localStorage.getItem('user_info');
-    if (!userInfo) {
-        alert("데이터 파이프라인 유입관을 사용하시려면 먼저 로그인 또는 회원가입을 완료해야 합니다.");
-        window.location.href = 'register.html';
-        return false;
-    }
-    return true;
-}
-
-// 🎯 [신규 기능] 로그인 유저 맞춤형 UI 및 회사 정보 자동 인입 스크립트
-function initAuthenticatedUI() {
-    const userInfo = localStorage.getItem('user_info');
-    const company = localStorage.getItem('company_name');
-    const domain = localStorage.getItem('domain_name');
-    const navAuthSection = document.getElementById('nav-auth-section');
-
-    // 세션 정보가 존재한다면 (로그인 완료 상태)
-    if (userInfo && company && domain) {
-        
-        // 1. 오른쪽 위 메뉴를 [대시보드 이동] 과 [로그아웃] 버튼으로 완벽하게 교체
-        if (navAuthSection) {
-            navAuthSection.innerHTML = `
-                <a href="dashboard.html" class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold px-4 py-2 rounded-lg transition-all shadow-md shadow-indigo-600/20 cursor-pointer flex items-center gap-1">
-                    📉 관제 대시보드 이동
-                </a>
-                <button onclick="handleLogout()" class="text-sm font-semibold text-slate-400 hover:text-rose-400 transition-colors cursor-pointer">
-                    로그아웃
-                </button>
-            `;
-        }
-
-        // 2. 유입관 카드 내 Company, Domain 입력창에 유저 고유 정보 자동 주입
-        const companyInput = document.getElementById('company');
-        const domainInput = document.getElementById('domain');
-        
-        if (companyInput) {
-            companyInput.value = company;
-            companyInput.disabled = true; // 본인 부서 파이프라인 고정을 위해 읽기 전용 처리(권장)
-            companyInput.classList.add('opacity-60', 'cursor-not-allowed');
-        }
-        if (domainInput) {
-            domainInput.value = domain;
-            domainInput.disabled = true;
-            domainInput.classList.add('opacity-60', 'cursor-not-allowed');
-        }
-    }
-}
-
-// 🎯 [신규 기능] 로그아웃 액션 처리 함수
-window.handleLogout = function() {
-    localStorage.clear(); // 세션 삭제
-    alert("로그아웃 되었습니다. 메인 화면으로 이동합니다.");
     window.location.href = 'index.html';
 }
 
-// 페이지가 로드되자마자 로그인 UI 매핑 스위치 작동
 document.addEventListener('DOMContentLoaded', initAuthenticatedUI);
 
 
@@ -192,22 +120,26 @@ startUploadBtn.addEventListener('click', () => {
 });
 
 function uploadFileToServer(file) {
-    const company = document.getElementById('company').value.trim();
+    const email = localStorage.getItem('email');
     const domain = document.getElementById('domain').value.trim();
-    const source = document.getElementById('source').value; 
 
-    if (!company || !domain || !source) {
-        alert("Company(회사명), Domain(도메인명), Source(소스명)를 모두 입력 및 선택해 주세요!");
+    if (!email) {
+        alert("로그인이 필요합니다.");
+        window.location.href = 'login.html';
+        return;
+    }
+    if (!domain) {
+        alert("Domain(도메인명)을 입력해 주세요!");
         return;
     }
 
     startUploadBtn.disabled = true;
     statusDiv.innerHTML = `<span class="text-indigo-400 animate-pulse">⏳ [${file.name}] 카프카 브론즈 레이어로 적재 중...</span>`;
 
+    // 🎯 조치 완료: 동료분의 변경사항에 맞춰 source 데이터를 완전히 탈락시키고 정합성을 맞춤
     const formData = new FormData();
-    formData.append("company", company);
+    formData.append("email", email);
     formData.append("domain", domain);
-    formData.append("source", source); 
     formData.append("file", file);
 
     fetch("/api/upload", {
