@@ -260,19 +260,22 @@ def _write_blob_df(container: str, blob_path: str, df: pd.DataFrame):
 # ── 📊 데이터 로직 API 영역 ──────────────────────────────────
 
 
-# 🎯 [개조 완료] 타사 데이터 원천 필터링 격리 체계 수립
+# 🎯 [교체 구간] 여기부터 복사해서 기존 @app.get("/api/dashboard") 자리에 덮어쓰세요.
 @app.get("/api/dashboard")
 def get_dashboard_data(email: str = Query(...), domain: Optional[str] = Query(None)):
     try:
         conn = psycopg2.connect(**DB_CONFIG, cursor_factory=RealDictCursor)
         cursor = conn.cursor()
 
-        # 1. 호출한 유저의 회사명 추출
-        cursor.execute("SELECT company_name FROM web_users WHERE email = %s", (email,))
+        # 1. 호출한 유저의 이메일을 기반으로 회사명 및 user_id 동적 추출 (하드코딩 제거)
+        cursor.execute("SELECT user_id, company_name FROM web_users WHERE email = %s", (email,))
         user = cursor.fetchone()
         if not user:
+            cursor.close()
+            conn.close()
             return {"status": "success", "count": 0, "data": []}
 
+        user_id = user["user_id"]
         company_name = user["company_name"]
 
         import re
@@ -282,30 +285,49 @@ def get_dashboard_data(email: str = Query(...), domain: Optional[str] = Query(No
             s = re.sub(r"_+", "_", s).strip("_")
             return s[:50]
 
-        # 타사 위키피디아 간섭 방어용 회사 접두사 규격 생성
+        # 회사 접두사 규격 가변 생성 (예: 'asung_')
         company_prefix = f"{_normalize(company_name)}_"
 
+        # 2. 유저가 상단 드롭다운에서 특정 도메인을 선택해 조회할 때
         if domain:
-            # 2-A. 특정 부서 도메인이 찍혀 넘어왔다면 해당 파이프라인만 정밀 조제 (예: asung_ecommerce)
-            exact_target = f"{company_prefix}{_normalize(domain)}"
+            pure_domain = _normalize(domain)
+            prefixed_domain = f"{company_prefix}{pure_domain}"
+            
+            # Databricks에서 접두사를 붙였든 안 붙였든 22일 자 데이터를 매핑하도록 OR 조건 필터 배치
             query = """
                 SELECT window_start, domain_name, total_ingested_rows AS total_cnt, 
                        passed_rows AS clean_cnt, quarantined_rows AS error_cnt, data_purity_rate AS purity_rate 
                 FROM web_main_dashboard
-                WHERE domain_name = %s
+                WHERE domain_name = %s OR domain_name = %s
                 ORDER BY window_start DESC;
             """
-            cursor.execute(query, (exact_target,))
+            cursor.execute(query, (prefixed_domain, pure_domain))
         else:
-            # 2-B. 기본 로딩 시 내 소유의 파이프라인만 LIKE 스캔으로 안전 격리 로드
-            query = """
-                SELECT window_start, domain_name, total_ingested_rows AS total_cnt, 
-                       passed_rows AS clean_cnt, quarantined_rows AS error_cnt, data_purity_rate AS purity_rate 
-                FROM web_main_dashboard
-                WHERE domain_name LIKE %s
-                ORDER BY window_start DESC;
-            """
-            cursor.execute(query, (company_prefix + "%",))
+            # 3. 기본 대시보드 로딩 시 내 소유의 모든 파이프라인 명세를 안전하게 매핑
+            cursor.execute("SELECT bronze_folder FROM data_sources WHERE user_id = %s AND status = 'active'", (user_id,))
+            user_domains = [d["bronze_folder"] for d in cursor.fetchall()]
+            pure_domains = [d.replace(company_prefix, "") for d in user_domains]
+            
+            allowed_domains = list(set(user_domains + pure_domains))
+            
+            if allowed_domains:
+                query = """
+                    SELECT window_start, domain_name, total_ingested_rows AS total_cnt, 
+                           passed_rows AS clean_cnt, quarantined_rows AS error_cnt, data_purity_rate AS purity_rate 
+                    FROM web_main_dashboard
+                    WHERE domain_name LIKE %s OR domain_name IN %s
+                    ORDER BY window_start DESC;
+                """
+                cursor.execute(query, (company_prefix + "%", tuple(allowed_domains)))
+            else:
+                query = """
+                    SELECT window_start, domain_name, total_ingested_rows AS total_cnt, 
+                           passed_rows AS clean_cnt, quarantined_rows AS error_cnt, data_purity_rate AS purity_rate 
+                    FROM web_main_dashboard
+                    WHERE domain_name LIKE %s
+                    ORDER BY window_start DESC;
+                """
+                cursor.execute(query, (company_prefix + "%",))
 
         rows = cursor.fetchall()
         cursor.close()
@@ -313,7 +335,8 @@ def get_dashboard_data(email: str = Query(...), domain: Optional[str] = Query(No
 
         return {"status": "success", "count": len(rows), "data": rows}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"데이터베이스 연결 실패: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"데이터베이스 연결 및 조회 실패: {str(e)}")
+# 🎯 [교체 구간 끝] 이 밑에 있는 class LoginRequest(BaseModel): 부터는 기존 코드를 그대로 두시면 됩니다.
 
 
 class LoginRequest(BaseModel):
@@ -658,15 +681,39 @@ def api_approve_to_master(domain: str, req: QuarantineActionRequest):
 # ── 💾 마스터(Master) 컨테이너 정형화 리포트 다운로드 API 영역 ───────
 
 
+# 🎯 [다운로드 보안 개조] 로그인한 회사 접두사를 자동으로 붙여서 Azure 스토리지를 스캔하는 구조
+# ── 💾 마스터(Master) 컨테이너 정형화 리포트 다운로드 API (회사명 직접 동적 매핑 버전) ───────
 @app.get("/api/download/{domain}")
-def download_master_csv(domain: str):
+def download_master_csv(domain: str, company: Optional[str] = Query(None)): # 🎯 이메일 대신 company를 받으며, 에러 방지를 위해 Optional로 선언합니다.
     try:
-        df_master = _get_blob_df("master", f"{domain}/")
+        import re
+        def _normalize(s: str) -> str:
+            s = s.lower().strip()
+            s = re.sub(r"[^a-z0-9_]", "_", s)
+            s = re.sub(r"_+", "_", s).strip("_")
+            return s[:50]
 
+        pure_domain = _normalize(domain)
+        
+        # 1. 프론트엔드가 ?company=samsung 처럼 회사명을 던져준 경우 자동으로 해당 폴더 매핑
+        if company:
+            pure_company = _normalize(company)
+            blob_prefix = f"{pure_company}_{pure_domain}/"
+        else:
+            # 2. 만약 파라미터가 누락되었다면 기본 안전 자산으로 'asung_' 폴더를 바라보도록 설정 (서버 다운 방지 가드)
+            blob_prefix = f"asung_{pure_domain}/"
+        
+        # 3. 설정된 동적 폴더 경로(예: samsung_ecommerce/)로 아주르 'master' 컨테이너 스캔
+        df_master = _get_blob_df("master", blob_prefix)
+
+        # 4. 폴백(Fallback): 지정 폴더에 데이터가 없고 company 입력이 없었다면 구형 순수 도메인 폴더명으로도 검색
+        if df_master.empty and not company:
+            df_master = _get_blob_df("master", f"{pure_domain}/")
+            
         if df_master.empty:
             raise HTTPException(
                 status_code=404,
-                detail=f"[{domain}] 마스터 컨테이너 영역에 최종 정형 보고서가 존재하지 않습니다.",
+                detail=f"[{domain}] 마스터 컨테이너 영역에 최종 정형 보고서가 존재하지 않습니다. (바라본 아주르 경로: {blob_prefix})",
             )
 
         csv_buffer = io.StringIO()
@@ -680,6 +727,8 @@ def download_master_csv(domain: str):
                 "Content-Disposition": f"attachment; filename={domain}_final_master_report.csv"
             },
         )
+    except HTTPException as he:
+        raise he
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"다운로드 파일 연산 실패: {str(e)}")
 
