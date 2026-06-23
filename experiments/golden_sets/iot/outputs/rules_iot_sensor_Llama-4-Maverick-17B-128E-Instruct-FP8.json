@@ -1,0 +1,128 @@
+{
+  "suite_name": "iot_sensor_quality_suite",
+  "domain": "iot_sensor",
+  "version": "1.0",
+  "generated_at": "2026-06-22T09:05:43.369002Z",
+  "model": "Llama-4-Maverick-17B-128E-Instruct-FP8",
+  "dataset": "stephanmatzka/predictive-maintenance-dataset-ai4i-2020",
+  "table": "ai4i_predictive_maintenance.csv",
+  "null_strategies": {},
+  "expectations": [
+    {
+      "rule_id": "RULE_IOT__001",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "UDI",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Primary key cannot be null"
+    },
+    {
+      "rule_id": "RULE_IOT__002",
+      "expectation_type": "expect_column_values_to_be_unique",
+      "column": "UDI",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Primary key must be unique"
+    },
+    {
+      "rule_id": "RULE_IOT__003",
+      "expectation_type": "expect_column_values_to_match_regex",
+      "column": "Product ID",
+      "kwargs": {
+        "regex": "^[LMH]\\d{5}$"
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Product ID format is not consistent"
+    },
+    {
+      "rule_id": "RULE_IOT__004",
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "column": "Type",
+      "kwargs": {
+        "value_set": [
+          "L",
+          "M",
+          "H"
+        ]
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Type must be one of L, M, H"
+    },
+    {
+      "rule_id": "RULE_IOT__005",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "Air temperature [K]",
+      "kwargs": {
+        "min_value": 295,
+        "max_value": 305
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Air temperature is out of expected range"
+    },
+    {
+      "rule_id": "RULE_IOT__006",
+      "expectation_type": "expect_column_min_to_be_between",
+      "column": "Rotational speed [rpm]",
+      "kwargs": {
+        "min_value": 0,
+        "max_value": 100
+      },
+      "severity": "warning",
+      "enabled": false,
+      "reason": "Minimum rotational speed is too low"
+    },
+    {
+      "rule_id": "RULE_IOT__007",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "Torque [Nm]",
+      "kwargs": {
+        "min_value": 20,
+        "max_value": 50
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Torque is out of expected range"
+    }
+  ],
+  "anomaly_rules": [
+    {
+      "rule_id": "RULE_IOT__010",
+      "name": "Z-score anomaly detection for Rotational speed [rpm]",
+      "columns": [
+        "Rotational speed [rpm]"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect unusual rotational speeds"
+    },
+    {
+      "rule_id": "RULE_IOT__011",
+      "name": "IQR anomaly detection for Tool wear [min]",
+      "columns": [
+        "Tool wear [min]"
+      ],
+      "method": "iqr",
+      "threshold": 1.5,
+      "severity": "warning",
+      "reason": "Detect unusual tool wear"
+    },
+    {
+      "rule_id": "RULE_IOT__012",
+      "name": "Frequency anomaly detection for Type",
+      "columns": [
+        "Type"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect unusual type frequencies"
+    }
+  ],
+  "text_quality_columns": []
+}

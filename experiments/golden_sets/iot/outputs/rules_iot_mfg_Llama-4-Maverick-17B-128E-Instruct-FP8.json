@@ -1,0 +1,411 @@
+{
+  "suite_name": "iot_mfg_quality_suite",
+  "domain": "iot_mfg",
+  "version": "1.0",
+  "generated_at": "2026-06-22T13:30:30.793795Z",
+  "model": "Llama-4-Maverick-17B-128E-Instruct-FP8",
+  "dataset": "rabieelkharoua/predicting-manufacturing-defects-dataset",
+  "table": "manufacturing_defect_dataset.csv",
+  "null_strategies": {},
+  "expectations": [
+    {
+      "rule_id": "RULE_IOT__001",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "ProductionVolume",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "ProductionVolume is a critical field and cannot be null"
+    },
+    {
+      "rule_id": "RULE_IOT__002",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "ProductionCost",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "ProductionCost is a critical field and cannot be null"
+    },
+    {
+      "rule_id": "RULE_IOT__003",
+      "expectation_type": "expect_column_values_to_be_unique",
+      "column": "ProductionCost",
+      "kwargs": {},
+      "severity": "warning",
+      "enabled": true,
+      "reason": "ProductionCost should be unique for accurate cost tracking"
+    },
+    {
+      "rule_id": "RULE_IOT__004",
+      "expectation_type": "expect_column_values_to_match_regex",
+      "column": "SupplierQuality",
+      "kwargs": {
+        "regex": "^\\d+(\\.\\d+)?$"
+      },
+      "severity": "info",
+      "enabled": true,
+      "reason": "SupplierQuality should be a numeric value"
+    },
+    {
+      "rule_id": "RULE_IOT__005",
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "column": "DeliveryDelay",
+      "kwargs": {
+        "value_set": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "DeliveryDelay should be within the valid set of values"
+    },
+    {
+      "rule_id": "RULE_IOT__006",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "DefectRate",
+      "kwargs": {
+        "min_value": 0,
+        "max_value": 100
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "DefectRate should be between 0 and 100"
+    },
+    {
+      "rule_id": "RULE_IOT__007",
+      "expectation_type": "expect_column_min_to_be_between",
+      "column": "QualityScore",
+      "kwargs": {
+        "min_value": 0,
+        "max_value": 100
+      },
+      "severity": "info",
+      "enabled": true,
+      "reason": "QualityScore minimum value should be within the valid range"
+    },
+    {
+      "rule_id": "RULE_IOT__008",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "MaintenanceHours",
+      "kwargs": {
+        "min_value": 0,
+        "max_value": 24
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "MaintenanceHours should be between 0 and 24"
+    },
+    {
+      "rule_id": "RULE_IOT__009",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "DowntimePercentage",
+      "kwargs": {
+        "min_value": 0,
+        "max_value": 100
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "DowntimePercentage should be between 0 and 100"
+    },
+    {
+      "rule_id": "RULE_IOT__010",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "InventoryTurnover",
+      "kwargs": {
+        "min_value": 0
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "InventoryTurnover should be non-negative"
+    },
+    {
+      "rule_id": "RULE_IOT__011",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "StockoutRate",
+      "kwargs": {
+        "min_value": 0,
+        "max_value": 1
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "StockoutRate should be between 0 and 1"
+    },
+    {
+      "rule_id": "RULE_IOT__012",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "WorkerProductivity",
+      "kwargs": {
+        "min_value": 0,
+        "max_value": 100
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "WorkerProductivity should be between 0 and 100"
+    },
+    {
+      "rule_id": "RULE_IOT__013",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "SafetyIncidents",
+      "kwargs": {
+        "min_value": 0
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "SafetyIncidents should be non-negative"
+    },
+    {
+      "rule_id": "RULE_IOT__014",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "EnergyConsumption",
+      "kwargs": {
+        "min_value": 0
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "EnergyConsumption should be non-negative"
+    },
+    {
+      "rule_id": "RULE_IOT__015",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "EnergyEfficiency",
+      "kwargs": {
+        "min_value": 0,
+        "max_value": 1
+      },
+      "severity": "info",
+      "enabled": true,
+      "reason": "EnergyEfficiency should be between 0 and 1"
+    },
+    {
+      "rule_id": "RULE_IOT__016",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "AdditiveProcessTime",
+      "kwargs": {
+        "min_value": 0
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "AdditiveProcessTime should be non-negative"
+    },
+    {
+      "rule_id": "RULE_IOT__017",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "AdditiveMaterialCost",
+      "kwargs": {
+        "min_value": 0
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "AdditiveMaterialCost should be non-negative"
+    },
+    {
+      "rule_id": "RULE_IOT__018",
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "column": "DefectStatus",
+      "kwargs": {
+        "value_set": [
+          0,
+          1
+        ]
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "DefectStatus should be either 0 or 1"
+    }
+  ],
+  "anomaly_rules": [
+    {
+      "rule_id": "RULE_IOT__019",
+      "name": "ProductionVolume Anomaly Detection",
+      "columns": [
+        "ProductionVolume"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect unusual production volume"
+    },
+    {
+      "rule_id": "RULE_IOT__020",
+      "name": "ProductionCost Anomaly Detection",
+      "columns": [
+        "ProductionCost"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect unusual production cost"
+    },
+    {
+      "rule_id": "RULE_IOT__021",
+      "name": "SupplierQuality Anomaly Detection",
+      "columns": [
+        "SupplierQuality"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect unusual supplier quality"
+    },
+    {
+      "rule_id": "RULE_IOT__022",
+      "name": "DeliveryDelay Frequency Check",
+      "columns": [
+        "DeliveryDelay"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "info",
+      "reason": "Monitor delivery delay frequency"
+    },
+    {
+      "rule_id": "RULE_IOT__023",
+      "name": "DefectRate Anomaly Detection",
+      "columns": [
+        "DefectRate"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect unusual defect rate"
+    },
+    {
+      "rule_id": "RULE_IOT__024",
+      "name": "QualityScore Anomaly Detection",
+      "columns": [
+        "QualityScore"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect unusual quality score"
+    },
+    {
+      "rule_id": "RULE_IOT__025",
+      "name": "MaintenanceHours Frequency Check",
+      "columns": [
+        "MaintenanceHours"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "info",
+      "reason": "Monitor maintenance hours frequency"
+    },
+    {
+      "rule_id": "RULE_IOT__026",
+      "name": "DowntimePercentage Anomaly Detection",
+      "columns": [
+        "DowntimePercentage"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect unusual downtime percentage"
+    },
+    {
+      "rule_id": "RULE_IOT__027",
+      "name": "InventoryTurnover Anomaly Detection",
+      "columns": [
+        "InventoryTurnover"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect unusual inventory turnover"
+    },
+    {
+      "rule_id": "RULE_IOT__028",
+      "name": "StockoutRate Anomaly Detection",
+      "columns": [
+        "StockoutRate"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect unusual stockout rate"
+    },
+    {
+      "rule_id": "RULE_IOT__029",
+      "name": "WorkerProductivity Anomaly Detection",
+      "columns": [
+        "WorkerProductivity"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect unusual worker productivity"
+    },
+    {
+      "rule_id": "RULE_IOT__030",
+      "name": "SafetyIncidents Frequency Check",
+      "columns": [
+        "SafetyIncidents"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "info",
+      "reason": "Monitor safety incidents frequency"
+    },
+    {
+      "rule_id": "RULE_IOT__031",
+      "name": "EnergyConsumption Anomaly Detection",
+      "columns": [
+        "EnergyConsumption"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect unusual energy consumption"
+    },
+    {
+      "rule_id": "RULE_IOT__032",
+      "name": "EnergyEfficiency Anomaly Detection",
+      "columns": [
+        "EnergyEfficiency"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect unusual energy efficiency"
+    },
+    {
+      "rule_id": "RULE_IOT__033",
+      "name": "AdditiveProcessTime Anomaly Detection",
+      "columns": [
+        "AdditiveProcessTime"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect unusual additive process time"
+    },
+    {
+      "rule_id": "RULE_IOT__034",
+      "name": "AdditiveMaterialCost Anomaly Detection",
+      "columns": [
+        "AdditiveMaterialCost"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect unusual additive material cost"
+    },
+    {
+      "rule_id": "RULE_IOT__035",
+      "name": "DefectStatus Frequency Check",
+      "columns": [
+        "DefectStatus"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "info",
+      "reason": "Monitor defect status frequency"
+    }
+  ],
+  "text_quality_columns": []
+}

@@ -1,0 +1,548 @@
+{
+  "suite_name": "hc_billing_quality_suite",
+  "domain": "hc_billing",
+  "version": "1.0",
+  "generated_at": "2026-06-22T07:31:14.336032Z",
+  "model": "Mistral-Large-3",
+  "dataset": "prasad22/healthcare-dataset",
+  "table": "healthcare_dataset.csv",
+  "null_strategies": {
+    "Name": {
+      "strategy": "allow",
+      "default_value": null,
+      "reason": "No nulls present, but not an identifier column. No action needed."
+    },
+    "Age": {
+      "strategy": "fill_mean",
+      "default_value": 51.539,
+      "reason": "Normal numeric column with no nulls, but strategy applied if nulls occur."
+    },
+    "Gender": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column with no nulls, but strategy applied if nulls occur."
+    },
+    "Blood Type": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column with no nulls, but strategy applied if nulls occur."
+    },
+    "Medical Condition": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column with no nulls, but strategy applied if nulls occur."
+    },
+    "Date of Admission": {
+      "strategy": "fill_forward",
+      "default_value": null,
+      "reason": "Timestamp column with no nulls, but strategy applied if nulls occur. NEVER fill_mean."
+    },
+    "Doctor": {
+      "strategy": "allow",
+      "default_value": null,
+      "reason": "No nulls present, but not an identifier column. No action needed."
+    },
+    "Hospital": {
+      "strategy": "allow",
+      "default_value": null,
+      "reason": "No nulls present, but not an identifier column. No action needed."
+    },
+    "Insurance Provider": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column with no nulls, but strategy applied if nulls occur."
+    },
+    "Billing Amount": {
+      "strategy": "fill_median",
+      "default_value": null,
+      "reason": "Skewed numeric column (high std vs mean) with no nulls, but strategy applied if nulls occur."
+    },
+    "Room Number": {
+      "strategy": "fill_mean",
+      "default_value": 301.135,
+      "reason": "Normal numeric column with no nulls, but strategy applied if nulls occur."
+    },
+    "Admission Type": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column with no nulls, but strategy applied if nulls occur."
+    },
+    "Discharge Date": {
+      "strategy": "fill_forward",
+      "default_value": null,
+      "reason": "Timestamp column with no nulls, but strategy applied if nulls occur. NEVER fill_mean."
+    },
+    "Medication": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column with no nulls, but strategy applied if nulls occur."
+    },
+    "Test Results": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column with no nulls, but strategy applied if nulls occur."
+    }
+  },
+  "expectations": [
+    {
+      "rule_id": "RULE_HC_B_001",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Name",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Patient name must not be null for identification and billing purposes."
+    },
+    {
+      "rule_id": "RULE_HC_B_002",
+      "expectation_type": "expect_column_values_to_match_regex",
+      "column": "Name",
+      "kwargs": {
+        "regex": "^[A-Za-z\\s\\-']+$"
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Patient name should only contain letters, spaces, hyphens, or apostrophes."
+    },
+    {
+      "rule_id": "RULE_HC_B_003",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Age",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Age must not be null for accurate billing and treatment."
+    },
+    {
+      "rule_id": "RULE_HC_B_004",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "Age",
+      "kwargs": {
+        "min_value": 0,
+        "max_value": 120
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Age must be a realistic value between 0 and 120."
+    },
+    {
+      "rule_id": "RULE_HC_B_005",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Gender",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Gender must not be null for demographic and billing purposes."
+    },
+    {
+      "rule_id": "RULE_HC_B_006",
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "column": "Gender",
+      "kwargs": {
+        "value_set": [
+          "Male",
+          "Female",
+          "Other"
+        ]
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Gender must be one of the standardized values: Male, Female, or Other."
+    },
+    {
+      "rule_id": "RULE_HC_B_007",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Blood Type",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Blood type must not be null for medical and billing records."
+    },
+    {
+      "rule_id": "RULE_HC_B_008",
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "column": "Blood Type",
+      "kwargs": {
+        "value_set": [
+          "A+",
+          "A-",
+          "B+",
+          "B-",
+          "AB+",
+          "AB-",
+          "O+",
+          "O-"
+        ]
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Blood type must be one of the standardized values."
+    },
+    {
+      "rule_id": "RULE_HC_B_009",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Medical Condition",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Medical condition must not be null for accurate billing and treatment."
+    },
+    {
+      "rule_id": "RULE_HC_B_010",
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "column": "Medical Condition",
+      "kwargs": {
+        "value_set": [
+          "Cancer",
+          "Obesity",
+          "Diabetes",
+          "Asthma",
+          "Hypertension",
+          "Arthritis"
+        ]
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Medical condition must be one of the standardized values."
+    },
+    {
+      "rule_id": "RULE_HC_B_011",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Date of Admission",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Date of admission must not be null for billing and record-keeping."
+    },
+    {
+      "rule_id": "RULE_HC_B_012",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Doctor",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Doctor name must not be null for accountability and billing."
+    },
+    {
+      "rule_id": "RULE_HC_B_013",
+      "expectation_type": "expect_column_values_to_match_regex",
+      "column": "Doctor",
+      "kwargs": {
+        "regex": "^[A-Za-z\\s\\-']+$"
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Doctor name should only contain letters, spaces, hyphens, or apostrophes."
+    },
+    {
+      "rule_id": "RULE_HC_B_014",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Hospital",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Hospital name must not be null for billing and record-keeping."
+    },
+    {
+      "rule_id": "RULE_HC_B_015",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Insurance Provider",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Insurance provider must not be null for billing purposes."
+    },
+    {
+      "rule_id": "RULE_HC_B_016",
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "column": "Insurance Provider",
+      "kwargs": {
+        "value_set": [
+          "Blue Cross",
+          "Medicare",
+          "Aetna",
+          "UnitedHealthcare",
+          "Cigna"
+        ]
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Insurance provider must be one of the standardized values."
+    },
+    {
+      "rule_id": "RULE_HC_B_017",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Billing Amount",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Billing amount must not be null for financial records."
+    },
+    {
+      "rule_id": "RULE_HC_B_018",
+      "expectation_type": "expect_column_min_to_be_between",
+      "column": "Billing Amount",
+      "kwargs": {
+        "min_value": 0
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Billing amount must be greater than 0."
+    },
+    {
+      "rule_id": "RULE_HC_B_019",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Room Number",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Room number must not be null for patient location tracking."
+    },
+    {
+      "rule_id": "RULE_HC_B_020",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "Room Number",
+      "kwargs": {
+        "min_value": 1,
+        "max_value": 1000
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Room number must be a realistic value between 1 and 1000."
+    },
+    {
+      "rule_id": "RULE_HC_B_021",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Admission Type",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Admission type must not be null for billing and treatment purposes."
+    },
+    {
+      "rule_id": "RULE_HC_B_022",
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "column": "Admission Type",
+      "kwargs": {
+        "value_set": [
+          "Urgent",
+          "Emergency",
+          "Elective"
+        ]
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Admission type must be one of the standardized values: Urgent, Emergency, or Elective."
+    },
+    {
+      "rule_id": "RULE_HC_B_023",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Discharge Date",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Discharge date must not be null for billing and record-keeping."
+    },
+    {
+      "rule_id": "RULE_HC_B_024",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Medication",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Medication must not be null for accurate treatment and billing."
+    },
+    {
+      "rule_id": "RULE_HC_B_025",
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "column": "Medication",
+      "kwargs": {
+        "value_set": [
+          "Paracetamol",
+          "Ibuprofen",
+          "Aspirin",
+          "Penicillin",
+          "Insulin"
+        ]
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Medication must be one of the standardized values."
+    },
+    {
+      "rule_id": "RULE_HC_B_026",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Test Results",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Test results must not be null for medical and billing records."
+    },
+    {
+      "rule_id": "RULE_HC_B_027",
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "column": "Test Results",
+      "kwargs": {
+        "value_set": [
+          "Normal",
+          "Abnormal",
+          "Inconclusive"
+        ]
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Test results must be one of the standardized values: Normal, Abnormal, or Inconclusive."
+    },
+    {
+      "rule_id": "RULE_HC_B_028",
+      "expectation_type": "expect_column_values_to_be_unique",
+      "column": "Name",
+      "kwargs": {},
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Patient names are expected to be unique, though duplicates may occur due to similar names."
+    },
+    {
+      "rule_id": "RULE_HC_B_029",
+      "expectation_type": "expect_column_values_to_be_unique",
+      "column": "Doctor",
+      "kwargs": {},
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Doctor names are expected to be unique, though duplicates may occur due to similar names."
+    },
+    {
+      "rule_id": "RULE_HC_B_030",
+      "expectation_type": "expect_column_values_to_be_unique",
+      "column": "Hospital",
+      "kwargs": {},
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Hospital names are expected to be unique, though duplicates may occur due to similar names."
+    }
+  ],
+  "anomaly_rules": [
+    {
+      "rule_id": "RULE_HC_B_031",
+      "name": "billing_amount_zscore_anomaly",
+      "columns": [
+        "Billing Amount"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detects unusually high or low billing amounts using z-score."
+    },
+    {
+      "rule_id": "RULE_HC_B_032",
+      "name": "billing_amount_iqr_anomaly",
+      "columns": [
+        "Billing Amount"
+      ],
+      "method": "iqr",
+      "threshold": 1.5,
+      "severity": "warning",
+      "reason": "Detects skewed billing amounts using interquartile range."
+    },
+    {
+      "rule_id": "RULE_HC_B_033",
+      "name": "age_zscore_anomaly",
+      "columns": [
+        "Age"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detects unusually high or low ages using z-score."
+    },
+    {
+      "rule_id": "RULE_HC_B_034",
+      "name": "room_number_zscore_anomaly",
+      "columns": [
+        "Room Number"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detects unusually high or low room numbers using z-score."
+    },
+    {
+      "rule_id": "RULE_HC_B_035",
+      "name": "gender_frequency_anomaly",
+      "columns": [
+        "Gender"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detects unusual frequency distributions in gender values."
+    },
+    {
+      "rule_id": "RULE_HC_B_036",
+      "name": "blood_type_frequency_anomaly",
+      "columns": [
+        "Blood Type"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detects unusual frequency distributions in blood type values."
+    },
+    {
+      "rule_id": "RULE_HC_B_037",
+      "name": "medical_condition_frequency_anomaly",
+      "columns": [
+        "Medical Condition"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detects unusual frequency distributions in medical condition values."
+    },
+    {
+      "rule_id": "RULE_HC_B_038",
+      "name": "insurance_provider_frequency_anomaly",
+      "columns": [
+        "Insurance Provider"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detects unusual frequency distributions in insurance provider values."
+    },
+    {
+      "rule_id": "RULE_HC_B_039",
+      "name": "admission_type_frequency_anomaly",
+      "columns": [
+        "Admission Type"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detects unusual frequency distributions in admission type values."
+    },
+    {
+      "rule_id": "RULE_HC_B_040",
+      "name": "medication_frequency_anomaly",
+      "columns": [
+        "Medication"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detects unusual frequency distributions in medication values."
+    },
+    {
+      "rule_id": "RULE_HC_B_041",
+      "name": "test_results_frequency_anomaly",
+      "columns": [
+        "Test Results"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detects unusual frequency distributions in test results values."
+    }
+  ],
+  "text_quality_columns": []
+}

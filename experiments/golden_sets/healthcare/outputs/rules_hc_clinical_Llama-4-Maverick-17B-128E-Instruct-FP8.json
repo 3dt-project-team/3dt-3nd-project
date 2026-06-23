@@ -1,0 +1,700 @@
+{
+  "suite_name": "hc_clinical_quality_suite",
+  "domain": "hc_clinical",
+  "version": "1.0",
+  "generated_at": "2026-06-22T07:27:04.958618Z",
+  "model": "Llama-4-Maverick-17B-128E-Instruct-FP8",
+  "dataset": "mdsajjadullah/synthetic-medical-ehr-dataset-10k",
+  "table": "full_dataset.csv",
+  "null_strategies": {
+    "patient_id": {
+      "strategy": "drop",
+      "default_value": null,
+      "reason": "Identifier column"
+    },
+    "age_range": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column"
+    },
+    "age_midpoint": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column"
+    },
+    "gender": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column"
+    },
+    "ethnicity": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column"
+    },
+    "region": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column"
+    },
+    "icd10_code": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column"
+    },
+    "condition": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column"
+    },
+    "severity": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column"
+    },
+    "onset_year": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column"
+    },
+    "medication": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column"
+    },
+    "num_visits": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column"
+    },
+    "adherence_pct": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column"
+    },
+    "systolic_bp": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column"
+    },
+    "diastolic_bp": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column"
+    },
+    "heart_rate": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column"
+    },
+    "cholesterol_mg_dl": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column"
+    },
+    "bmi": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column"
+    },
+    "outcome": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column"
+    },
+    "adverse_outcome": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column"
+    }
+  },
+  "expectations": [
+    {
+      "rule_id": "RULE_HC_C_001",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "patient_id",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Patient ID is a primary identifier and cannot be null"
+    },
+    {
+      "rule_id": "RULE_HC_C_002",
+      "expectation_type": "expect_column_values_to_be_unique",
+      "column": "patient_id",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Patient ID must be unique"
+    },
+    {
+      "rule_id": "RULE_HC_C_003",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "age_range",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Age range is required for analysis"
+    },
+    {
+      "rule_id": "RULE_HC_C_004",
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "column": "age_range",
+      "kwargs": {
+        "value_set": [
+          "0-17",
+          "18-29",
+          "30-44",
+          "45-59",
+          "60-74",
+          "75-99"
+        ]
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Age range must be within predefined categories"
+    },
+    {
+      "rule_id": "RULE_HC_C_005",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "age_midpoint",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Age midpoint is required for analysis"
+    },
+    {
+      "rule_id": "RULE_HC_C_006",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "age_midpoint",
+      "kwargs": {
+        "min_value": 0
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Age midpoint must be a non-negative number"
+    },
+    {
+      "rule_id": "RULE_HC_C_007",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "gender",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Gender is required for analysis"
+    },
+    {
+      "rule_id": "RULE_HC_C_008",
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "column": "gender",
+      "kwargs": {
+        "value_set": [
+          "Male",
+          "Female",
+          "Other"
+        ]
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Gender must be one of the predefined categories"
+    },
+    {
+      "rule_id": "RULE_HC_C_009",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "ethnicity",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Ethnicity is required for analysis"
+    },
+    {
+      "rule_id": "RULE_HC_C_010",
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "column": "ethnicity",
+      "kwargs": {
+        "value_set": [
+          "White",
+          "Black",
+          "Hispanic",
+          "Asian",
+          "Other"
+        ]
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Ethnicity must be one of the predefined categories"
+    },
+    {
+      "rule_id": "RULE_HC_C_011",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "region",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Region is required for analysis"
+    },
+    {
+      "rule_id": "RULE_HC_C_012",
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "column": "region",
+      "kwargs": {
+        "value_set": [
+          "North",
+          "South",
+          "East",
+          "West",
+          "Central"
+        ]
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Region must be one of the predefined categories"
+    },
+    {
+      "rule_id": "RULE_HC_C_013",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "icd10_code",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "ICD10 code is required for analysis"
+    },
+    {
+      "rule_id": "RULE_HC_C_014",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "condition",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Condition is required for analysis"
+    },
+    {
+      "rule_id": "RULE_HC_C_015",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "severity",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Severity is required for analysis"
+    },
+    {
+      "rule_id": "RULE_HC_C_016",
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "column": "severity",
+      "kwargs": {
+        "value_set": [
+          "Mild",
+          "Moderate",
+          "Severe"
+        ]
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Severity must be one of the predefined categories"
+    },
+    {
+      "rule_id": "RULE_HC_C_017",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "onset_year",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Onset year is required for analysis"
+    },
+    {
+      "rule_id": "RULE_HC_C_018",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "onset_year",
+      "kwargs": {
+        "min_value": 1900
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Onset year should be a reasonable value"
+    },
+    {
+      "rule_id": "RULE_HC_C_019",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "medication",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Medication is required for analysis"
+    },
+    {
+      "rule_id": "RULE_HC_C_020",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "num_visits",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Number of visits is required for analysis"
+    },
+    {
+      "rule_id": "RULE_HC_C_021",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "num_visits",
+      "kwargs": {
+        "min_value": 0
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Number of visits must be a non-negative number"
+    },
+    {
+      "rule_id": "RULE_HC_C_022",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "adherence_pct",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Adherence percentage is required for analysis"
+    },
+    {
+      "rule_id": "RULE_HC_C_023",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "adherence_pct",
+      "kwargs": {
+        "min_value": 0,
+        "max_value": 100
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Adherence percentage must be between 0 and 100"
+    },
+    {
+      "rule_id": "RULE_HC_C_024",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "systolic_bp",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Systolic blood pressure is required for analysis"
+    },
+    {
+      "rule_id": "RULE_HC_C_025",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "systolic_bp",
+      "kwargs": {
+        "min_value": 0
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Systolic blood pressure must be a non-negative number"
+    },
+    {
+      "rule_id": "RULE_HC_C_026",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "diastolic_bp",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Diastolic blood pressure is required for analysis"
+    },
+    {
+      "rule_id": "RULE_HC_C_027",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "diastolic_bp",
+      "kwargs": {
+        "min_value": 0
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Diastolic blood pressure must be a non-negative number"
+    },
+    {
+      "rule_id": "RULE_HC_C_028",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "heart_rate",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Heart rate is required for analysis"
+    },
+    {
+      "rule_id": "RULE_HC_C_029",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "heart_rate",
+      "kwargs": {
+        "min_value": 0
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Heart rate must be a non-negative number"
+    },
+    {
+      "rule_id": "RULE_HC_C_030",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "cholesterol_mg_dl",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Cholesterol level is required for analysis"
+    },
+    {
+      "rule_id": "RULE_HC_C_031",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "cholesterol_mg_dl",
+      "kwargs": {
+        "min_value": 0
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Cholesterol level must be a non-negative number"
+    },
+    {
+      "rule_id": "RULE_HC_C_032",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "bmi",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "BMI is required for analysis"
+    },
+    {
+      "rule_id": "RULE_HC_C_033",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "bmi",
+      "kwargs": {
+        "min_value": 0
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "BMI must be a non-negative number"
+    },
+    {
+      "rule_id": "RULE_HC_C_034",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "outcome",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Outcome is required for analysis"
+    },
+    {
+      "rule_id": "RULE_HC_C_035",
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "column": "outcome",
+      "kwargs": {
+        "value_set": [
+          "Recovered",
+          "Deteriorated",
+          "Stable"
+        ]
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Outcome must be one of the predefined categories"
+    },
+    {
+      "rule_id": "RULE_HC_C_036",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "adverse_outcome",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Adverse outcome is required for analysis"
+    }
+  ],
+  "anomaly_rules": [
+    {
+      "rule_id": "RULE_HC_A_001",
+      "name": "Age Midpoint Z-Score Anomaly",
+      "columns": [
+        "age_midpoint"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Age midpoint is outside of 3 standard deviations from the mean"
+    },
+    {
+      "rule_id": "RULE_HC_A_002",
+      "name": "Onset Year Z-Score Anomaly",
+      "columns": [
+        "onset_year"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Onset year is outside of 3 standard deviations from the mean"
+    },
+    {
+      "rule_id": "RULE_HC_A_003",
+      "name": "Number of Visits Z-Score Anomaly",
+      "columns": [
+        "num_visits"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Number of visits is outside of 3 standard deviations from the mean"
+    },
+    {
+      "rule_id": "RULE_HC_A_004",
+      "name": "Adherence Percentage Z-Score Anomaly",
+      "columns": [
+        "adherence_pct"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Adherence percentage is outside of 3 standard deviations from the mean"
+    },
+    {
+      "rule_id": "RULE_HC_A_005",
+      "name": "Systolic Blood Pressure Z-Score Anomaly",
+      "columns": [
+        "systolic_bp"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Systolic blood pressure is outside of 3 standard deviations from the mean"
+    },
+    {
+      "rule_id": "RULE_HC_A_006",
+      "name": "Diastolic Blood Pressure Z-Score Anomaly",
+      "columns": [
+        "diastolic_bp"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Diastolic blood pressure is outside of 3 standard deviations from the mean"
+    },
+    {
+      "rule_id": "RULE_HC_A_007",
+      "name": "Heart Rate Z-Score Anomaly",
+      "columns": [
+        "heart_rate"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Heart rate is outside of 3 standard deviations from the mean"
+    },
+    {
+      "rule_id": "RULE_HC_A_008",
+      "name": "Cholesterol Level Z-Score Anomaly",
+      "columns": [
+        "cholesterol_mg_dl"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Cholesterol level is outside of 3 standard deviations from the mean"
+    },
+    {
+      "rule_id": "RULE_HC_A_009",
+      "name": "BMI Z-Score Anomaly",
+      "columns": [
+        "bmi"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "BMI is outside of 3 standard deviations from the mean"
+    },
+    {
+      "rule_id": "RULE_HC_A_010",
+      "name": "Age Range Frequency Anomaly",
+      "columns": [
+        "age_range"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Age range has an unusual frequency distribution"
+    },
+    {
+      "rule_id": "RULE_HC_A_011",
+      "name": "Gender Frequency Anomaly",
+      "columns": [
+        "gender"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Gender has an unusual frequency distribution"
+    },
+    {
+      "rule_id": "RULE_HC_A_012",
+      "name": "Ethnicity Frequency Anomaly",
+      "columns": [
+        "ethnicity"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Ethnicity has an unusual frequency distribution"
+    },
+    {
+      "rule_id": "RULE_HC_A_013",
+      "name": "Region Frequency Anomaly",
+      "columns": [
+        "region"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Region has an unusual frequency distribution"
+    },
+    {
+      "rule_id": "RULE_HC_A_014",
+      "name": "ICD10 Code Frequency Anomaly",
+      "columns": [
+        "icd10_code"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "ICD10 code has an unusual frequency distribution"
+    },
+    {
+      "rule_id": "RULE_HC_A_015",
+      "name": "Condition Frequency Anomaly",
+      "columns": [
+        "condition"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Condition has an unusual frequency distribution"
+    },
+    {
+      "rule_id": "RULE_HC_A_016",
+      "name": "Severity Frequency Anomaly",
+      "columns": [
+        "severity"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Severity has an unusual frequency distribution"
+    },
+    {
+      "rule_id": "RULE_HC_A_017",
+      "name": "Medication Frequency Anomaly",
+      "columns": [
+        "medication"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Medication has an unusual frequency distribution"
+    },
+    {
+      "rule_id": "RULE_HC_A_018",
+      "name": "Outcome Frequency Anomaly",
+      "columns": [
+        "outcome"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Outcome has an unusual frequency distribution"
+    }
+  ],
+  "text_quality_columns": []
+}

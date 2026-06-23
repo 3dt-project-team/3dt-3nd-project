@@ -1,0 +1,114 @@
+{
+  "suite_name": "hc_clinical_quality_suite",
+  "domain": "hc_clinical",
+  "version": "1.0",
+  "generated_at": "2026-06-22T07:25:31.244008Z",
+  "model": "Llama-3.3-70B-Instruct",
+  "dataset": "mdsajjadullah/synthetic-medical-ehr-dataset-10k",
+  "table": "full_dataset.csv",
+  "null_strategies": {
+    "patient_id": {
+      "strategy": "drop",
+      "default_value": null,
+      "reason": "Identifier column"
+    },
+    "age_range": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column with null_rate <= 0.1"
+    },
+    "age_midpoint": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column"
+    },
+    "gender": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column with null_rate <= 0.1"
+    },
+    "ethnicity": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column with null_rate <= 0.1"
+    },
+    "region": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column with null_rate <= 0.1"
+    },
+    "icd10_code": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column with null_rate <= 0.1"
+    },
+    "condition": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column with null_rate <= 0.1"
+    },
+    "severity": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column with null_rate <= 0.1"
+    },
+    "onset_year": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column"
+    },
+    "medication": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column with null_rate <= 0.1"
+    },
+    "num_visits": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column"
+    },
+    "adherence_pct": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column"
+    },
+    "systolic_bp": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column"
+    },
+    "diastolic_bp": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column"
+    },
+    "heart_rate": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column"
+    },
+    "cholesterol_mg_dl": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column"
+    },
+    "bmi": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column"
+    },
+    "outcome": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column with null_rate <= 0.1"
+    },
+    "adverse_outcome": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Boolean column"
+    }
+  },
+  "expectations": [],
+  "anomaly_rules": [],
+  "text_quality_columns": []
+}

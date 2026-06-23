@@ -1,0 +1,522 @@
+{
+  "suite_name": "iot_mfg_quality_suite",
+  "domain": "iot_mfg",
+  "version": "1.0",
+  "generated_at": "2026-06-22T13:19:56.253835Z",
+  "model": "gpt-4.1-mini",
+  "dataset": "rabieelkharoua/predicting-manufacturing-defects-dataset",
+  "table": "manufacturing_defect_dataset.csv",
+  "null_strategies": {
+    "ProductionVolume": {
+      "strategy": "fill_median",
+      "default_value": null,
+      "reason": "Skewed numeric with high std vs mean"
+    },
+    "ProductionCost": {
+      "strategy": "fill_median",
+      "default_value": null,
+      "reason": "Skewed numeric with high std vs mean"
+    },
+    "SupplierQuality": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric"
+    },
+    "DeliveryDelay": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical numeric with null_rate 0.0"
+    },
+    "DefectRate": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric"
+    },
+    "QualityScore": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric"
+    },
+    "MaintenanceHours": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric"
+    },
+    "DowntimePercentage": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric"
+    },
+    "InventoryTurnover": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric"
+    },
+    "StockoutRate": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric"
+    },
+    "WorkerProductivity": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric"
+    },
+    "SafetyIncidents": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical numeric with null_rate 0.0"
+    },
+    "EnergyConsumption": {
+      "strategy": "fill_median",
+      "default_value": null,
+      "reason": "Skewed numeric with high std vs mean"
+    },
+    "EnergyEfficiency": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric"
+    },
+    "AdditiveProcessTime": {
+      "strategy": "fill_median",
+      "default_value": null,
+      "reason": "Skewed numeric with high std vs mean"
+    },
+    "AdditiveMaterialCost": {
+      "strategy": "fill_median",
+      "default_value": null,
+      "reason": "Skewed numeric with high std vs mean"
+    },
+    "DefectStatus": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Boolean column"
+    }
+  },
+  "expectations": [
+    {
+      "rule_id": "RULE_IOT__001",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "ProductionVolume",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "No nulls allowed in ProductionVolume as per data profile."
+    },
+    {
+      "rule_id": "RULE_IOT__002",
+      "expectation_type": "expect_column_values_to_be_unique",
+      "column": "ProductionVolume",
+      "kwargs": {},
+      "severity": "warning",
+      "enabled": true,
+      "reason": "ProductionVolume has high unique count, uniqueness expected."
+    },
+    {
+      "rule_id": "RULE_IOT__003",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "ProductionVolume",
+      "kwargs": {
+        "min_value": 0,
+        "max_value": 2000
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "ProductionVolume should be within a reasonable range based on sample and mean."
+    },
+    {
+      "rule_id": "RULE_IOT__004",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "ProductionCost",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "No nulls allowed in ProductionCost as per data profile."
+    },
+    {
+      "rule_id": "RULE_IOT__005",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "ProductionCost",
+      "kwargs": {
+        "min_value": 0,
+        "max_value": 50000
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "ProductionCost should be positive and within expected upper bound."
+    },
+    {
+      "rule_id": "RULE_IOT__006",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "SupplierQuality",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "No nulls allowed in SupplierQuality as per data profile."
+    },
+    {
+      "rule_id": "RULE_IOT__007",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "SupplierQuality",
+      "kwargs": {
+        "min_value": 0,
+        "max_value": 100
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "SupplierQuality is a percentage score, must be between 0 and 100."
+    },
+    {
+      "rule_id": "RULE_IOT__008",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "DeliveryDelay",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "No nulls allowed in DeliveryDelay as per data profile."
+    },
+    {
+      "rule_id": "RULE_IOT__009",
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "column": "DeliveryDelay",
+      "kwargs": {
+        "value_set": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "DeliveryDelay has 6 unique values, expected to be in set {0,1,2,3,4,5}."
+    },
+    {
+      "rule_id": "RULE_IOT__010",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "DefectRate",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "No nulls allowed in DefectRate as per data profile."
+    },
+    {
+      "rule_id": "RULE_IOT__011",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "DefectRate",
+      "kwargs": {
+        "min_value": 0,
+        "max_value": 10
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "DefectRate should be a small positive rate, max 10 based on domain knowledge."
+    },
+    {
+      "rule_id": "RULE_IOT__012",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "QualityScore",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "No nulls allowed in QualityScore as per data profile."
+    },
+    {
+      "rule_id": "RULE_IOT__013",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "QualityScore",
+      "kwargs": {
+        "min_value": 0,
+        "max_value": 100
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "QualityScore is a percentage score, must be between 0 and 100."
+    },
+    {
+      "rule_id": "RULE_IOT__014",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "MaintenanceHours",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "No nulls allowed in MaintenanceHours as per data profile."
+    },
+    {
+      "rule_id": "RULE_IOT__015",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "MaintenanceHours",
+      "kwargs": {
+        "min_value": 0,
+        "max_value": 100
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "MaintenanceHours expected to be within reasonable operational limits."
+    },
+    {
+      "rule_id": "RULE_IOT__016",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "DowntimePercentage",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "No nulls allowed in DowntimePercentage as per data profile."
+    },
+    {
+      "rule_id": "RULE_IOT__017",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "DowntimePercentage",
+      "kwargs": {
+        "min_value": 0,
+        "max_value": 100
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "DowntimePercentage is a percentage, must be between 0 and 100."
+    },
+    {
+      "rule_id": "RULE_IOT__018",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "InventoryTurnover",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "No nulls allowed in InventoryTurnover as per data profile."
+    },
+    {
+      "rule_id": "RULE_IOT__019",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "InventoryTurnover",
+      "kwargs": {
+        "min_value": 0,
+        "max_value": 50
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "InventoryTurnover expected within typical operational range."
+    },
+    {
+      "rule_id": "RULE_IOT__020",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "StockoutRate",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "No nulls allowed in StockoutRate as per data profile."
+    },
+    {
+      "rule_id": "RULE_IOT__021",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "StockoutRate",
+      "kwargs": {
+        "min_value": 0,
+        "max_value": 1
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "StockoutRate is a rate, must be between 0 and 1."
+    },
+    {
+      "rule_id": "RULE_IOT__022",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "WorkerProductivity",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "No nulls allowed in WorkerProductivity as per data profile."
+    },
+    {
+      "rule_id": "RULE_IOT__023",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "WorkerProductivity",
+      "kwargs": {
+        "min_value": 0,
+        "max_value": 150
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "WorkerProductivity expected within reasonable range."
+    },
+    {
+      "rule_id": "RULE_IOT__024",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "SafetyIncidents",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "No nulls allowed in SafetyIncidents as per data profile."
+    },
+    {
+      "rule_id": "RULE_IOT__025",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "SafetyIncidents",
+      "kwargs": {
+        "min_value": 0,
+        "max_value": 50
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "SafetyIncidents expected within reasonable operational limits."
+    },
+    {
+      "rule_id": "RULE_IOT__026",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "EnergyConsumption",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "No nulls allowed in EnergyConsumption as per data profile."
+    },
+    {
+      "rule_id": "RULE_IOT__027",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "EnergyConsumption",
+      "kwargs": {
+        "min_value": 0,
+        "max_value": 10000
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "EnergyConsumption expected within typical operational range."
+    },
+    {
+      "rule_id": "RULE_IOT__028",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "EnergyEfficiency",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "No nulls allowed in EnergyEfficiency as per data profile."
+    },
+    {
+      "rule_id": "RULE_IOT__029",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "EnergyEfficiency",
+      "kwargs": {
+        "min_value": 0,
+        "max_value": 1
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "EnergyEfficiency is a ratio, must be between 0 and 1."
+    },
+    {
+      "rule_id": "RULE_IOT__030",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "AdditiveProcessTime",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "No nulls allowed in AdditiveProcessTime as per data profile."
+    },
+    {
+      "rule_id": "RULE_IOT__031",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "AdditiveProcessTime",
+      "kwargs": {
+        "min_value": 0,
+        "max_value": 20
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "AdditiveProcessTime expected within operational limits."
+    },
+    {
+      "rule_id": "RULE_IOT__032",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "AdditiveMaterialCost",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "No nulls allowed in AdditiveMaterialCost as per data profile."
+    },
+    {
+      "rule_id": "RULE_IOT__033",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "AdditiveMaterialCost",
+      "kwargs": {
+        "min_value": 0,
+        "max_value": 1000
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "AdditiveMaterialCost expected within typical cost range."
+    },
+    {
+      "rule_id": "RULE_IOT__034",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "DefectStatus",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "No nulls allowed in DefectStatus as per data profile."
+    },
+    {
+      "rule_id": "RULE_IOT__035",
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "column": "DefectStatus",
+      "kwargs": {
+        "value_set": [
+          0,
+          1
+        ]
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "DefectStatus is binary, expected values are 0 or 1."
+    }
+  ],
+  "anomaly_rules": [
+    {
+      "rule_id": "RULE_IOT__100",
+      "name": "zscore_numeric",
+      "columns": [
+        "ProductionVolume",
+        "ProductionCost",
+        "SupplierQuality",
+        "DefectRate",
+        "QualityScore",
+        "DowntimePercentage",
+        "InventoryTurnover",
+        "StockoutRate",
+        "WorkerProductivity",
+        "EnergyConsumption",
+        "EnergyEfficiency",
+        "AdditiveProcessTime",
+        "AdditiveMaterialCost"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect outliers in numeric columns with standard deviation > 0 using z-score."
+    },
+    {
+      "rule_id": "RULE_IOT__101",
+      "name": "iqr_skewed_numeric",
+      "columns": [
+        "MaintenanceHours",
+        "SafetyIncidents"
+      ],
+      "method": "iqr",
+      "threshold": 1.5,
+      "severity": "warning",
+      "reason": "Detect outliers in skewed numeric columns using IQR method."
+    },
+    {
+      "rule_id": "RULE_IOT__102",
+      "name": "frequency_categorical",
+      "columns": [
+        "DeliveryDelay",
+        "DefectStatus"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect anomalies in categorical columns based on frequency threshold."
+    }
+  ],
+  "text_quality_columns": []
+}
