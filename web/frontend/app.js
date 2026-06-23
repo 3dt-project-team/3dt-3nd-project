@@ -214,10 +214,16 @@ async function processQuarantineAction(actionType, domain) {
     }
 }
 
+// ── 💾 마스터 리포트 다운로드 파라미터 매핑 엔진 (동적 보완 완료) ───────────────────
 function downloadMasterReport(domain) {
     if (!domain) {
         alert("선택된 도메인이 없습니다.");
         return;
     }
-    window.location.href = `/api/download/${domain}`;
+    
+    // 🎯 핵심 조치: 로그인 시 브라우저 세션(localStorage)에 저장된 진짜 회사명(samsung, asung 등)을 자동으로 읽어옵니다.
+    const companyName = localStorage.getItem('company_name') || 'asung';
+    
+    // 🚀 백엔드로 요청을 날릴 때 회사명을 주소창 뒤에 고유 파라미터(?company=회사명)로 실어서 동적 매핑시킵니다!
+    window.location.href = `/api/download/${domain}?company=${encodeURIComponent(companyName)}`;
 }
