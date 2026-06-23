@@ -1,0 +1,201 @@
+{
+  "suite_name": "iot_mfg_quality_suite",
+  "domain": "iot_mfg",
+  "version": "1.0",
+  "generated_at": "2026-06-22T13:28:29.994244Z",
+  "model": "Llama-3.3-70B-Instruct",
+  "dataset": "rabieelkharoua/predicting-manufacturing-defects-dataset",
+  "table": "manufacturing_defect_dataset.csv",
+  "null_strategies": {
+    "ProductionVolume": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column"
+    },
+    "ProductionCost": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column"
+    },
+    "SupplierQuality": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column"
+    },
+    "DeliveryDelay": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column with low null rate"
+    },
+    "DefectRate": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column"
+    },
+    "QualityScore": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column"
+    },
+    "MaintenanceHours": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column with low null rate"
+    },
+    "DowntimePercentage": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column"
+    },
+    "InventoryTurnover": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column"
+    },
+    "StockoutRate": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column"
+    },
+    "WorkerProductivity": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column"
+    },
+    "SafetyIncidents": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column with low null rate"
+    },
+    "EnergyConsumption": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column"
+    },
+    "EnergyEfficiency": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column"
+    },
+    "AdditiveProcessTime": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column"
+    },
+    "AdditiveMaterialCost": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric column"
+    },
+    "DefectStatus": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column with low null rate"
+    }
+  },
+  "expectations": [
+    {
+      "rule_id": "RULE_IOT__001",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "ProductionVolume",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Production volume cannot be null"
+    },
+    {
+      "rule_id": "RULE_IOT__002",
+      "expectation_type": "expect_column_values_to_be_unique",
+      "column": "ProductionCost",
+      "kwargs": {},
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Production cost should be unique for each record"
+    },
+    {
+      "rule_id": "RULE_IOT__003",
+      "expectation_type": "expect_column_values_to_match_regex",
+      "column": "SupplierQuality",
+      "kwargs": {
+        "regex": "^\\d{1,3}\\.\\d{1,6}$"
+      },
+      "severity": "info",
+      "enabled": true,
+      "reason": "Supplier quality score should be a numeric value with up to 3 digits before the decimal point and up to 6 digits after the decimal point"
+    },
+    {
+      "rule_id": "RULE_IOT__004",
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "column": "DefectStatus",
+      "kwargs": {
+        "value_set": [
+          0,
+          1
+        ]
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Defect status should be either 0 or 1"
+    },
+    {
+      "rule_id": "RULE_IOT__005",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "DeliveryDelay",
+      "kwargs": {
+        "min_value": 0,
+        "max_value": 5
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Delivery delay should be between 0 and 5 days"
+    },
+    {
+      "rule_id": "RULE_IOT__006",
+      "expectation_type": "expect_column_min_to_be_between",
+      "column": "ProductionVolume",
+      "kwargs": {
+        "min_value": 0,
+        "max_value": 1000
+      },
+      "severity": "info",
+      "enabled": true,
+      "reason": "Minimum production volume should be between 0 and 1000 units"
+    }
+  ],
+  "anomaly_rules": [
+    {
+      "rule_id": "RULE_IOT__010",
+      "name": "Production Volume Anomaly Detection",
+      "columns": [
+        "ProductionVolume"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect production volume anomalies using z-score method"
+    },
+    {
+      "rule_id": "RULE_IOT__011",
+      "name": "Production Cost Anomaly Detection",
+      "columns": [
+        "ProductionCost"
+      ],
+      "method": "iqr",
+      "threshold": 1.5,
+      "severity": "warning",
+      "reason": "Detect production cost anomalies using IQR method"
+    },
+    {
+      "rule_id": "RULE_IOT__012",
+      "name": "Defect Status Anomaly Detection",
+      "columns": [
+        "DefectStatus"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "info",
+      "reason": "Detect defect status anomalies using frequency method"
+    }
+  ],
+  "text_quality_columns": []
+}

@@ -1,0 +1,13 @@
+{
+  "suite_name": "hc_billing_quality_suite",
+  "domain": "hc_billing",
+  "version": "1.0",
+  "generated_at": "2026-06-22T07:43:06.687231Z",
+  "model": "Llama-3.3-70B-Instruct",
+  "dataset": "prasad22/healthcare-dataset",
+  "table": "healthcare_dataset.csv",
+  "null_strategies": {},
+  "expectations": [],
+  "anomaly_rules": [],
+  "text_quality_columns": []
+}

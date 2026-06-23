@@ -1,0 +1,377 @@
+{
+  "suite_name": "iot_sensor_quality_suite",
+  "domain": "iot_sensor",
+  "version": "1.0",
+  "generated_at": "2026-06-22T08:16:53.593276Z",
+  "model": "Mistral-Large-3",
+  "dataset": "stephanmatzka/predictive-maintenance-dataset-ai4i-2020",
+  "table": "ai4i_predictive_maintenance.csv",
+  "null_strategies": {
+    "UDI": {
+      "strategy": "drop",
+      "default_value": null,
+      "reason": "Identifier column (UDI in name)"
+    },
+    "Product ID": {
+      "strategy": "drop",
+      "default_value": null,
+      "reason": "Identifier column (ID in name)"
+    },
+    "Type": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Categorical column with null_rate <= 0.1"
+    },
+    "Air temperature [K]": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric (std vs mean ratio is low)"
+    },
+    "Process temperature [K]": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric (std vs mean ratio is low)"
+    },
+    "Rotational speed [rpm]": {
+      "strategy": "fill_median",
+      "default_value": null,
+      "reason": "Skewed numeric (high std vs mean ratio)"
+    },
+    "Torque [Nm]": {
+      "strategy": "fill_mean",
+      "default_value": null,
+      "reason": "Normal numeric (std vs mean ratio is moderate)"
+    },
+    "Tool wear [min]": {
+      "strategy": "fill_median",
+      "default_value": null,
+      "reason": "Skewed numeric (high std vs mean ratio)"
+    },
+    "Machine failure": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Boolean-like numeric column (binary values)"
+    },
+    "TWF": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Boolean-like numeric column (binary values)"
+    },
+    "HDF": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Boolean-like numeric column (binary values)"
+    },
+    "PWF": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Boolean-like numeric column (binary values)"
+    },
+    "OSF": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Boolean-like numeric column (binary values)"
+    },
+    "RNF": {
+      "strategy": "fill_mode",
+      "default_value": null,
+      "reason": "Boolean-like numeric column (binary values)"
+    }
+  },
+  "expectations": [
+    {
+      "rule_id": "RULE_IOT__001",
+      "expectation_type": "expect_column_values_to_be_unique",
+      "column": "UDI",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "UDI should be unique as it is an identifier for each sensor record."
+    },
+    {
+      "rule_id": "RULE_IOT__002",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "UDI",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "UDI must not be null as it is a critical identifier."
+    },
+    {
+      "rule_id": "RULE_IOT__003",
+      "expectation_type": "expect_column_values_to_match_regex",
+      "column": "Product ID",
+      "kwargs": {
+        "regex": "^[A-Z][0-9]{5}$"
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Product ID should follow the pattern of one uppercase letter followed by five digits."
+    },
+    {
+      "rule_id": "RULE_IOT__004",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Product ID",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Product ID must not be null as it identifies the product type."
+    },
+    {
+      "rule_id": "RULE_IOT__005",
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "column": "Type",
+      "kwargs": {
+        "value_set": [
+          "L",
+          "H",
+          "M"
+        ]
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Type must be one of the predefined categories: L, H, or M."
+    },
+    {
+      "rule_id": "RULE_IOT__006",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Type",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Type must not be null as it categorizes the sensor product."
+    },
+    {
+      "rule_id": "RULE_IOT__007",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "Air temperature [K]",
+      "kwargs": {
+        "min_value": 273,
+        "max_value": 373
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Air temperature should be within a physically plausible range (0-100°C in Kelvin)."
+    },
+    {
+      "rule_id": "RULE_IOT__008",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Air temperature [K]",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Air temperature must not be null as it is a critical sensor reading."
+    },
+    {
+      "rule_id": "RULE_IOT__009",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "Process temperature [K]",
+      "kwargs": {
+        "min_value": 273,
+        "max_value": 373
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Process temperature should be within a physically plausible range (0-100°C in Kelvin)."
+    },
+    {
+      "rule_id": "RULE_IOT__010",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Process temperature [K]",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Process temperature must not be null as it is a critical sensor reading."
+    },
+    {
+      "rule_id": "RULE_IOT__011",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "Rotational speed [rpm]",
+      "kwargs": {
+        "min_value": 0,
+        "max_value": 3000
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Rotational speed should be within a plausible range for industrial sensors (0-3000 rpm)."
+    },
+    {
+      "rule_id": "RULE_IOT__012",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Rotational speed [rpm]",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Rotational speed must not be null as it is a critical sensor reading."
+    },
+    {
+      "rule_id": "RULE_IOT__013",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "Torque [Nm]",
+      "kwargs": {
+        "min_value": 0,
+        "max_value": 100
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Torque should be within a plausible range for industrial sensors (0-100 Nm)."
+    },
+    {
+      "rule_id": "RULE_IOT__014",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Torque [Nm]",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Torque must not be null as it is a critical sensor reading."
+    },
+    {
+      "rule_id": "RULE_IOT__015",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "Tool wear [min]",
+      "kwargs": {
+        "min_value": 0,
+        "max_value": 500
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Tool wear should be within a plausible range (0-500 minutes)."
+    },
+    {
+      "rule_id": "RULE_IOT__016",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Tool wear [min]",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Tool wear must not be null as it indicates the wear on the tool."
+    },
+    {
+      "rule_id": "RULE_IOT__017",
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "column": "Machine failure",
+      "kwargs": {
+        "value_set": [
+          0,
+          1
+        ]
+      },
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Machine failure should be binary (0 or 1)."
+    },
+    {
+      "rule_id": "RULE_IOT__018",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Machine failure",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Machine failure must not be null as it indicates failure status."
+    },
+    {
+      "rule_id": "RULE_IOT__019",
+      "expectation_type": "expect_column_min_to_be_between",
+      "column": "Air temperature [K]",
+      "kwargs": {
+        "min_value": 273,
+        "max_value": 373
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Minimum air temperature should be within a physically plausible range (0-100°C in Kelvin)."
+    },
+    {
+      "rule_id": "RULE_IOT__020",
+      "expectation_type": "expect_column_min_to_be_between",
+      "column": "Process temperature [K]",
+      "kwargs": {
+        "min_value": 273,
+        "max_value": 373
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Minimum process temperature should be within a physically plausible range (0-100°C in Kelvin)."
+    }
+  ],
+  "anomaly_rules": [
+    {
+      "rule_id": "RULE_IOT__021",
+      "name": "zscore_air_temperature",
+      "columns": [
+        "Air temperature [K]"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect anomalies in air temperature using z-score."
+    },
+    {
+      "rule_id": "RULE_IOT__022",
+      "name": "zscore_process_temperature",
+      "columns": [
+        "Process temperature [K]"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect anomalies in process temperature using z-score."
+    },
+    {
+      "rule_id": "RULE_IOT__023",
+      "name": "zscore_rotational_speed",
+      "columns": [
+        "Rotational speed [rpm]"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect anomalies in rotational speed using z-score."
+    },
+    {
+      "rule_id": "RULE_IOT__024",
+      "name": "zscore_torque",
+      "columns": [
+        "Torque [Nm]"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect anomalies in torque using z-score."
+    },
+    {
+      "rule_id": "RULE_IOT__025",
+      "name": "zscore_tool_wear",
+      "columns": [
+        "Tool wear [min]"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect anomalies in tool wear using z-score."
+    },
+    {
+      "rule_id": "RULE_IOT__026",
+      "name": "frequency_type",
+      "columns": [
+        "Type"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect anomalies in the frequency distribution of sensor types."
+    },
+    {
+      "rule_id": "RULE_IOT__027",
+      "name": "frequency_product_id",
+      "columns": [
+        "Product ID"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect anomalies in the frequency distribution of product IDs."
+    }
+  ],
+  "text_quality_columns": []
+}

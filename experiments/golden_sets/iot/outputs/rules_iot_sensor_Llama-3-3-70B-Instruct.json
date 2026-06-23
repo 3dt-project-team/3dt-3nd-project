@@ -1,0 +1,189 @@
+{
+  "suite_name": "iot_sensor_quality_suite",
+  "domain": "iot_sensor",
+  "version": "1.0",
+  "generated_at": "2026-06-22T09:05:31.186020Z",
+  "model": "Llama-3.3-70B-Instruct",
+  "dataset": "stephanmatzka/predictive-maintenance-dataset-ai4i-2020",
+  "table": "ai4i_predictive_maintenance.csv",
+  "null_strategies": {},
+  "expectations": [
+    {
+      "rule_id": "RULE_IOT__001",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "UDI",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "UDI is a unique identifier and should not be null"
+    },
+    {
+      "rule_id": "RULE_IOT__002",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Product ID",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Product ID is a required field and should not be null"
+    },
+    {
+      "rule_id": "RULE_IOT__003",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Type",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Type is a required field and should not be null"
+    },
+    {
+      "rule_id": "RULE_IOT__004",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Air temperature [K]",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Air temperature is a required field and should not be null"
+    },
+    {
+      "rule_id": "RULE_IOT__005",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Process temperature [K]",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Process temperature is a required field and should not be null"
+    },
+    {
+      "rule_id": "RULE_IOT__006",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Rotational speed [rpm]",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Rotational speed is a required field and should not be null"
+    },
+    {
+      "rule_id": "RULE_IOT__007",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Torque [Nm]",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Torque is a required field and should not be null"
+    },
+    {
+      "rule_id": "RULE_IOT__008",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "column": "Tool wear [min]",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "Tool wear is a required field and should not be null"
+    },
+    {
+      "rule_id": "RULE_IOT__009",
+      "expectation_type": "expect_column_values_to_be_unique",
+      "column": "UDI",
+      "kwargs": {},
+      "severity": "critical",
+      "enabled": true,
+      "reason": "UDI should be unique for each record"
+    },
+    {
+      "rule_id": "RULE_IOT__010",
+      "expectation_type": "expect_column_values_to_match_regex",
+      "column": "Product ID",
+      "kwargs": {
+        "regex": "^[A-Z][0-9]{5}$"
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Product ID should match the format of a letter followed by 5 digits"
+    },
+    {
+      "rule_id": "RULE_IOT__011",
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "column": "Type",
+      "kwargs": {
+        "value_set": [
+          "L",
+          "H",
+          "M"
+        ]
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Type should be one of L, H, or M"
+    },
+    {
+      "rule_id": "RULE_IOT__012",
+      "expectation_type": "expect_column_values_to_be_between",
+      "column": "Air temperature [K]",
+      "kwargs": {
+        "min_value": 250,
+        "max_value": 350
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Air temperature should be between 250K and 350K"
+    },
+    {
+      "rule_id": "RULE_IOT__013",
+      "expectation_type": "expect_column_min_to_be_between",
+      "column": "Process temperature [K]",
+      "kwargs": {
+        "min_value": 250,
+        "max_value": 350
+      },
+      "severity": "warning",
+      "enabled": true,
+      "reason": "Minimum process temperature should be between 250K and 350K"
+    }
+  ],
+  "anomaly_rules": [
+    {
+      "rule_id": "RULE_IOT__020",
+      "name": "zscore_anomaly",
+      "columns": [
+        "UDI",
+        "Air temperature [K]",
+        "Process temperature [K]",
+        "Rotational speed [rpm]",
+        "Torque [Nm]",
+        "Tool wear [min]"
+      ],
+      "method": "zscore",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect anomalies in numeric columns using z-score method"
+    },
+    {
+      "rule_id": "RULE_IOT__021",
+      "name": "iqr_anomaly",
+      "columns": [
+        "UDI",
+        "Air temperature [K]",
+        "Process temperature [K]",
+        "Rotational speed [rpm]",
+        "Torque [Nm]",
+        "Tool wear [min]"
+      ],
+      "method": "iqr",
+      "threshold": 1.5,
+      "severity": "warning",
+      "reason": "Detect anomalies in numeric columns using IQR method"
+    },
+    {
+      "rule_id": "RULE_IOT__022",
+      "name": "frequency_anomaly",
+      "columns": [
+        "Type"
+      ],
+      "method": "frequency",
+      "threshold": 3,
+      "severity": "warning",
+      "reason": "Detect anomalies in categorical columns using frequency method"
+    }
+  ],
+  "text_quality_columns": []
+}
