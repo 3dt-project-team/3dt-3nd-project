@@ -14,8 +14,7 @@ DataSentinel — Batch Producer
 호출 방법 (FastAPI에서):
   from batch_producer import process_batch_file
   result = process_batch_file(
-      company="wikipedia",
-      domain="content",
+      user_id=1,
       file_path="/tmp/data.csv"
   )
 
@@ -34,6 +33,7 @@ import sys
 from datetime import datetime
 
 import pandas as pd
+import psycopg2
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -64,14 +64,48 @@ KAFKA_PRODUCER_CONFIG = {
 }
 
 # ── 파일 크기 제한 ───────────────────────────────────────
-LIMIT_MB       = 1024  # 1GB — 초과 시 거부
-EXCEL_LIMIT_MB = 200   # Excel 200MB 초과 시 CSV 변환 요구
+LIMIT_MB       = 1024   # 1GB — 초과 시 거부
+EXCEL_LIMIT_MB = 200    # Excel 200MB 초과 시 CSV 변환 요구
 CHUNK_SIZE     = 10_000  # 청크 처리 행 수
+
+
+# ── DB 연결 ──────────────────────────────────────────────
+def _get_db_conn():
+    return psycopg2.connect(
+        host=os.getenv("DB_HOST"),
+        dbname=os.getenv("DB_NAME"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD"),
+        port=os.getenv("DB_PORT", 5432)
+    )
+
+
+# ── web_users에서 company/domain 조회 ───────────────────
+def _get_user_info(user_id: int) -> dict:
+    """
+    web_users 테이블에서 company_name, domain_name 조회
+    Returns: {"company": ..., "domain": ...} or None
+    """
+    try:
+        conn = _get_db_conn()
+        cur  = conn.cursor()
+        cur.execute("""
+            SELECT company_name, domain_name
+            FROM web_users
+            WHERE user_id = %s
+        """, (user_id,))
+        row = cur.fetchone()
+        conn.close()
+        if row is None:
+            return None
+        return {"company": row[0], "domain": row[1]}
+    except Exception as e:
+        print(f"  ❌ 사용자 정보 조회 실패: {e}")
+        return None
 
 
 # ── Kafka 연결 ───────────────────────────────────────────
 def _create_producer() -> "KafkaProducer | None":
-    """Kafka Producer 생성. 실패 시 None 반환."""
     if not KAFKA_AVAILABLE:
         print("  ❌ kafka-python 미설치")
         return None
@@ -86,10 +120,6 @@ def _create_producer() -> "KafkaProducer | None":
 
 # ── 파일 읽기 ────────────────────────────────────────────
 def _read_file(file_path: str, file_size_mb: float):
-    """
-    파일 형식 및 크기에 따라 청크 이터레이터 반환.
-    실패 시 None 반환.
-    """
     try:
         if file_path.endswith(".csv"):
             if file_size_mb >= 100:
@@ -112,25 +142,47 @@ def _read_file(file_path: str, file_size_mb: float):
         return None
 
 
+# ── data_sources 등록 ────────────────────────────────────
+def _register_data_source(user_id: int, source_name: str, bronze_folder: str):
+    """
+    data_sources 테이블에 소스 등록
+    이미 있으면 스킵 (ON CONFLICT DO NOTHING)
+    """
+    try:
+        conn = _get_db_conn()
+        cur  = conn.cursor()
+        cur.execute("""
+            INSERT INTO data_sources
+                (user_id, source_name, bronze_folder, status, data_source_type)
+            VALUES (%s, %s, %s, 'active', 'batch')
+            ON CONFLICT (bronze_folder) DO NOTHING
+        """, (user_id, source_name, bronze_folder))
+        conn.commit()
+        conn.close()
+        print(f"  [OK] data_sources 등록 완료: {bronze_folder}")
+    except Exception as e:
+        print(f"  [WARN] data_sources 등록 실패: {e}")
+
+
 # ── 메인 함수 (FastAPI에서 호출) ─────────────────────────
 def process_batch_file(
-    company: str,
-    domain: str,
+    user_id: int,
     file_path: str,
 ) -> dict:
     """
-    웹 업로드 파일 → Kafka → Bronze 적재
+    웹 업로드 파일 → Kafka → Bronze 적재 → data_sources 등록
 
     Args:
-        company:   회사명 (예: wikipedia)
-        domain:    도메인명 (예: content)  ← kafka2bronze의 TENANT_NAME 규칙과 동일
-        file_path:   로컬 임시 파일 경로
-
-    Returns:
-        성공: {"status": "success", "sent": N, "failed": N,
-               "topic": "...", "bronze_folder": "..."}
-        실패: {"status": "error", "reason": "..."}
+        user_id:   웹 사용자 ID (web_users.user_id)
+        file_path: 로컬 임시 파일 경로
     """
+    # ── 0. web_users에서 company/domain 조회 ─────────────
+    user_info = _get_user_info(user_id)
+    if user_info is None:
+        return {"status": "error", "reason": f"user_id={user_id} 사용자 없음"}
+
+    company = user_info["company"]
+    domain  = user_info["domain"]
     print(f"\n[배치 처리 시작] {company} / {domain}")
 
     # ── 1. 파일 존재 확인 ────────────────────────────────
@@ -151,11 +203,12 @@ def process_batch_file(
     if chunks is None:
         return {"status": "error", "reason": "파일 읽기 실패 또는 지원하지 않는 형식"}
 
-    # ── 4. Kafka 토픽 자동 생성 ──────────────────────────
-    tm     = TenantManager()
-    tenant = tm.register_tenant(company, domain, "batch")
-    topic  = tenant.topic_name
+    # ── 4. Kafka 토픽 + Bronze 폴더명 생성 ───────────────
+    tm            = TenantManager()
+    tenant        = tm.register_tenant(company, domain, "batch")
+    topic         = tenant.topic_name
     bronze_folder = f"{tm._normalize(company)}_{tm._normalize(domain)}"
+    source_name   = bronze_folder
     print(f"  토픽: {topic}")
     print(f"  Bronze 폴더: {bronze_folder}")
 
@@ -172,13 +225,12 @@ def process_batch_file(
         for chunk in chunks:
             for _, row in chunk.iterrows():
                 try:
-                    # 원본 데이터 100% 보존 + 메타데이터만 추가
                     event = row.where(pd.notna(row), None).to_dict()
                     event["_ingest_ts"]   = datetime.utcnow().isoformat() + "Z"
                     event["_source_type"] = "batch"
                     event["_platform"]    = "datasentinel"
                     event["_company"]     = company
-                    event["_domain"] = domain
+                    event["_domain"]      = domain
 
                     producer.send(topic, value=event)
                     sent += 1
@@ -195,7 +247,7 @@ def process_batch_file(
         producer.flush()
         producer.close()
 
-        # ── 7. 임시 파일 삭제 (Blob은 수명 주기 규칙으로 1일 후 자동 삭제)
+        # ── 7. 임시 파일 삭제 ────────────────────────────
         try:
             os.remove(file_path)
             print(f"  임시 파일 삭제 완료: {file_path}")
@@ -203,6 +255,9 @@ def process_batch_file(
             pass
 
     print(f"  완료 | 성공: {sent:,}행 | 실패: {failed}행")
+
+    # ── 8. data_sources 등록 ─────────────────────────────
+    _register_data_source(user_id, source_name, bronze_folder)
 
     return {
         "status":        "success",
