@@ -25,7 +25,9 @@ Kafka → ADLS(Bronze) → AI 기반 품질 검증 → 실시간 정제(Silver) 
 - **최종 통합**: Auto Loader 기반 증분 처리로 분석·서빙 가능한 저장소에 적재
 ## 기술 스택
  
-`python` `pyspark` `Kafka` `Azure Databricks` `ADLS Gen2` `Spark Structured Streaming` `Redis` `Azure OpenAI` `Logic Apps` 
+* `python` `pyspark`
+* `Kafka`
+* `Azure Databricks` `ADLS Gen2` `Spark Structured Streaming` `Redis` `Azure OpenAI` `Logic Apps` 
  
 ## 팀 구성 (4인)
  
